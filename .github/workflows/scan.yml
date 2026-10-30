@@ -2,7 +2,7 @@ name: Woningzoeker
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # elke 5 minuten (GitHub kan bij drukte een paar minuten later starten)
+    - cron: "2-59/5 * * * *"  # elke 5 minuten, net na de drukke ronde minuten (GitHub kan bij drukte later starten)
   workflow_dispatch:  # handmatig starten via het tabblad Actions
     inputs:
       modus:
