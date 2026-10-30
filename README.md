@@ -30,24 +30,13 @@ Aanpassen kan op GitHub zelf: open `config.yaml`, klik op het potloodje, wijzig 
 
 ## Eenmalig instellen
 
-Alles in PowerShell, vanuit deze map.
+Alles in PowerShell, vanuit deze map. Eén script doet alle stappen achter elkaar (Telegram koppelen, Gmail koppelen met een app-wachtwoord, de gegevens versleuteld naar GitHub sturen en de eerste scan starten):
 
-1. Benodigdheden installeren:
-   ```powershell
-   python -m pip install --user -r requirements.txt
-   ```
-2. Telegram koppelen (maakt je eigen bot aan via @BotFather):
-   ```powershell
-   python setup_telegram.py
-   ```
-3. Gmail koppelen (met een app-wachtwoord, niet je gewone wachtwoord):
-   ```powershell
-   python setup_gmail.py
-   ```
-4. De geheimen naar GitHub sturen, zodat de scan daar kan inloggen. Ze komen versleuteld in je repository-instellingen en zijn niet openbaar:
-   ```powershell
-   & "C:\Program Files\GitHub CLI\gh.exe" secret set -f .env
-   ```
+```powershell
+python instellen.py
+```
+
+Je bot-token en app-wachtwoord komen in `.env` (staat niet op GitHub) en als versleutelde secrets in je repository-instellingen. Deel ze met niemand.
 
 Daarna start de scan vanzelf elke 5 minuten. Je krijgt elke dag een "nog actief"-bericht, en als een site langere tijd niet werkt krijg je een waarschuwing.
 
