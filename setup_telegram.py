@@ -1,5 +1,6 @@
 """Koppelt de woningzoeker aan jouw Telegram. Draai: python setup_telegram.py"""
 
+import getpass
 import sys
 import time
 from pathlib import Path
@@ -26,7 +27,7 @@ def main():
         "Stap 2: stuur /newbot, kies een naam (bv. 'Mijn Woningzoeker') en een gebruikersnaam die eindigt op 'bot'.\n"
         "Stap 3: BotFather stuurt je een token, zoiets als 123456789:ABCdef...\n"
     )
-    token = input("Plak hier het token en druk op Enter: ").strip()
+    token = getpass.getpass("Plak hier het token en druk op Enter (je ziet niets tijdens het plakken, dat klopt): ").strip()
     mij = api(token, "getMe")
     if not mij.get("ok"):
         sys.exit("Dat token werkt niet. Kopieer het nog eens precies uit het bericht van BotFather.")
