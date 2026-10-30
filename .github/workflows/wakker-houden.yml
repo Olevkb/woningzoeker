@@ -1,0 +1,22 @@
+name: Wakker houden
+
+# GitHub zet geplande scans uit als een repository 60 dagen geen activiteit heeft.
+# Dit maakt elke maand een lege commit, zodat de woningzoeker blijft draaien.
+on:
+  schedule:
+    - cron: "17 4 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name "woningzoeker-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Maandelijkse activiteit zodat de scan blijft draaien"
+          git push

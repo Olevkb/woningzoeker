@@ -1,0 +1,132 @@
+# Woningzoeker – jouw zoekcriteria
+# Pas dit bestand aan en de zoeker gebruikt het bij de volgende scan.
+
+zoeken:
+  plaats: Amsterdam
+
+  # Maximale huur voor de hele woning per maand.
+  # "excl." = kale huur zonder servicekosten/GWL, "incl." = alles erbij.
+  # Staat er niet bij welke het is, dan geldt de strengste grens (excl.).
+  max_huur_excl: 2600
+  max_huur_incl: 2900
+
+  # Minimaal 2 slaapkamers = minimaal 3 kamers totaal (woonkamer telt mee).
+  # Meer kamers is ook goed.
+  min_slaapkamers: 2
+  min_kamers: 3
+  min_m2: 45
+
+  # Wijken waar je wilt wonen. Dit zijn de officiële wijknamen (CBS/PDOK).
+  # De zoeker zoekt per advertentie op in welke wijk het adres ligt.
+  # Haal een # weg om een wijk toe te voegen, of zet er een # voor om hem uit te zetten.
+  wijken:
+    # --- Centrum ---
+    - Haarlemmerbuurt
+    - Jordaan
+    - Grachtengordel-West
+    - Grachtengordel-Zuid
+    - Burgwallen-Nieuwe Zijde
+    - Burgwallen-Oude Zijde
+    - Nieuwmarkt/Lastage
+    - De Weteringschans
+    - Weesperbuurt/Plantage
+    - Oostelijke Eilanden/Kadijken
+    # --- De Pijp ---
+    - Oude Pijp
+    - Nieuwe Pijp
+    - Zuid Pijp
+    # --- Zuid ---
+    - Museumkwartier
+    - Willemspark
+    - Schinkelbuurt
+    - Hoofddorppleinbuurt
+    - Stadionbuurt
+    - Apollobuurt
+    - Scheldebuurt
+    - IJselbuurt
+    - Rijnbuurt
+    - Prinses Irenebuurt e.o.
+    - Zuidas
+    # - Buitenveldert-West
+    # - Buitenveldert-Oost
+    # --- Oost: strook tussen Amstel en Wibautstraat ---
+    - Weesperzijde
+    # --- Uitbreidingen die je misschien later wilt ---
+    # - Oosterparkbuurt
+    # - Vondelparkbuurt
+    # - Helmersbuurt
+    # - Spaarndammerbuurt/Zeeheldenbuurt
+
+huurtoeslag:
+  # Wordt alleen gebruikt om in de melding een prijs per persoon te tonen.
+  per_maand: 525
+  personen: 2
+
+# Teksten in de advertentie. Elke regel is een zoekpatroon (hoofdletters maken niet uit).
+tekst:
+  # Advertentie wordt OVERGESLAGEN als een van deze patronen erin staat.
+  uitsluiten:
+    - geen studenten
+    - niet (geschikt )?voor studenten
+    - studenten (zijn )?niet (welkom|toegestaan)
+    - no students
+    - not (suitable )?for students
+    - students? (are )?not allowed
+    - geen (woning)?delers
+    - niet geschikt voor (woning)?delers
+    - no (house ?)?sharers
+    - not suitable for (house ?)?shar
+    - no (house ?)?sharing
+    - inschrijv\w* (is )?niet mogelijk
+    - geen inschrijving
+    - registration (is )?not (possible|allowed)
+    - no registration
+    - not possible to register
+    - \b1 persoon\b
+    - \b1 person\b
+    - single occupancy
+    - professionals only
+    - only (for )?(working )?professionals
+    - alleen (voor )?werkenden
+
+  # Positieve punten: komen als label in de melding.
+  pluspunten:
+    studenten (zijn )?(welkom|toegestaan): "🎓 studenten welkom"
+    students? (are )?(welcome|allowed): "🎓 studenten welkom"
+    garantste|guarantor: "🤝 garantsteller genoemd"
+    (woning)?delers (welkom|toegestaan|mogelijk)|suitable for (house ?)?shar|sharers (welcome|allowed)|delen (is )?toegestaan: "👥 delers toegestaan"
+
+  # Neutrale dingen die handig zijn om te weten.
+  letop:
+    tijdelijk|temporary|bepaalde tijd|fixed[- ]term|maximaal \d+ maanden|max\.? \d+ months: "⏳ tijdelijk contract"
+    (?<!on)gemeubileerd|(?<!un)(?<!un-)(?<!semi-)(?<!semi )furnished: "🛋 gemeubileerd"
+    \b[345] ?x (het |de |bruto |gross )?(maand)?(inkomen|huur|income|rent)|inkomenseis|income requirement|gross (monthly )?income: "💼 inkomenseis genoemd"
+
+  # Signalen van mogelijke oplichting.
+  oplichting:
+    - western union
+    - moneygram
+    - (ik|we|i) (woon|wonen|live|am|are) (nu )?(in het )?(buitenland|abroad)
+    - sleutels? (per|via de) post
+    - keys? (by|via) (mail|post)
+    - (betaal|pay) .{0,30}(voor|before) (de )?(bezichtiging|viewing)
+    - airbnb (betaling|payment)
+
+scan:
+  # Hoe vaak de zoeker kijkt (in minuten). 's Nachts (00:00–07:00) minder vaak.
+  interval_minuten: 5
+  nacht_interval_minuten: 20
+  # 'makelaars' = alle makelaars uit makelaars.yaml, 'gmail' = de e-mailalerts van Pararius/Funda/Huurwoningen.nl
+  bronnen:
+    - gmail
+    - makelaars
+    - rentola
+    - huurstunt
+    - kamernet
+    - 123wonen
+  # Bij de allereerste scan alleen advertenties melden die niet ouder zijn dan dit.
+  eerste_scan_max_uren: 48
+  # Nooit meer dan dit aantal meldingen per scan (tegen een stortvloed).
+  max_meldingen_per_scan: 15
+  # Zelfde woning op een andere site binnen zoveel dagen = geen nieuwe melding.
+  dubbel_dagen: 14

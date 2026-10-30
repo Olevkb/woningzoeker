@@ -1,0 +1,91 @@
+"""Meldingen naar je telefoon via een eigen Telegram-bot."""
+
+import html
+from datetime import datetime
+from urllib.parse import quote_plus
+
+import requests
+
+from .model import Woning
+
+
+class Telegram:
+    def __init__(self, token: str, chat_id: str):
+        self.url = f"https://api.telegram.org/bot{token}"
+        self.chat_id = chat_id
+
+    def _stuur(self, methode: str, **data) -> dict:
+        r = requests.post(f"{self.url}/{methode}", json={"chat_id": self.chat_id, **data}, timeout=30)
+        antwoord = r.json()
+        if not antwoord.get("ok"):
+            raise RuntimeError(f"Telegram {methode}: {antwoord.get('description')}")
+        return antwoord
+
+    def tekst(self, tekst: str):
+        self._stuur("sendMessage", text=tekst, parse_mode="HTML", disable_web_page_preview=True)
+
+    def woning(self, w: Woning, cfg: dict):
+        knoppen = {"inline_keyboard": [[{"text": "👉 Bekijk advertentie", "url": w.url}]]}
+        if w.adres:
+            kaart = f"https://www.google.com/maps/search/?api=1&query={quote_plus(f'{w.adres}, {w.plaats or 'Amsterdam'}')}"
+            knoppen["inline_keyboard"][0].append({"text": "🗺 Kaart", "url": kaart})
+        tekst = opmaak(w, cfg)
+        if w.foto:
+            try:
+                self._stuur("sendPhoto", photo=w.foto, caption=tekst, parse_mode="HTML", reply_markup=knoppen)
+                return
+            except (RuntimeError, requests.RequestException):
+                pass  # foto werd niet geaccepteerd, stuur dan alleen tekst
+        self._stuur("sendMessage", text=tekst, parse_mode="HTML", reply_markup=knoppen, disable_web_page_preview=True)
+
+
+def euro(bedrag: float) -> str:
+    return f"€{bedrag:,.0f}".replace(",", ".")
+
+
+def hoe_lang_geleden(moment: datetime | None) -> str:
+    if moment is None:
+        return ""
+    minuten = int((datetime.now() - moment).total_seconds() // 60)
+    if minuten < 1:
+        return "zojuist"
+    if minuten < 60:
+        return f"{minuten} min geleden"
+    if minuten < 48 * 60:
+        return f"{minuten // 60} uur geleden"
+    return f"{minuten // (24 * 60)} dagen geleden"
+
+
+def opmaak(w: Woning, cfg: dict) -> str:
+    e = html.escape
+    regels = [f"🏠 <b>{e(w.adres or w.straat or 'Woning')}</b>"]
+    plek = [w.wijk] if w.wijk else []
+    if w.buurt and w.buurt != w.wijk:
+        plek.append(w.buurt)
+    if plek:
+        regels.append(f"📍 {e(' · '.join(plek))}")
+
+    if w.prijs:
+        soort = {True: " incl.", False: " excl."}.get(w.prijs_incl, "")
+        prijs = f"💶 <b>{euro(w.prijs)}</b>{soort}"
+        toeslag = cfg.get("huurtoeslag") or {}
+        if toeslag.get("per_maand") and toeslag.get("personen"):
+            pp = (w.prijs - toeslag["per_maand"]) / toeslag["personen"]
+            prijs += f" · ≈ {euro(pp)} p.p. na toeslag"
+        regels.append(prijs)
+
+    maten = []
+    if w.kamers:
+        maten.append(f"{w.kamers} kamers")
+    if w.slaapkamers:
+        maten.append(f"{w.slaapkamers} slaapkamers")
+    if w.m2:
+        maten.append(f"{w.m2} m²")
+    if maten:
+        regels.append("🛏 " + " · ".join(maten))
+
+    bron = f"via {e(w.bron)}"
+    geleden = hoe_lang_geleden(w.geplaatst)
+    regels.append(f"🕒 {geleden + ' · ' if geleden else ''}{bron}")
+    regels.extend(e(label) for label in w.labels)
+    return "\n".join(regels)

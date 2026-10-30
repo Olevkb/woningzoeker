@@ -1,0 +1,78 @@
+# Makelaars en verhuurders die de zoeker afgaat.
+#
+# Per makelaar:
+#   naam:   zoals hij in de melding verschijnt
+#   url:    de pagina met het huuraanbod (liefst al gefilterd op Amsterdam)
+#   link:   patroon waaraan de links naar losse advertenties te herkennen zijn
+#   plaats: (optioneel) als de lijst al alleen Amsterdam toont
+#   alleen: (optioneel) sla kaartjes over waar dit niet in staat (bv. als de lijst heel Nederland toont)
+#
+# Een makelaar toevoegen? Zet er een blok bij en draai:  python -m woningzoeker --test-makelaars
+
+makelaars:
+  - naam: Hausing
+    url: https://hausing.com/for-rent
+    link: ^/for-rent/[^/]+/?$
+
+  - naam: Expat Housing
+    url: https://www.expathousing.com/rent-a-house/
+    link: ^/available-properties/[^/]+/?$
+
+  - naam: Vastgoed Nederland
+    url: https://www.vastgoednederland.nl/huurwoningen/amsterdam
+    link: ^/huurwoningen/amsterdam/woning-\d+
+    plaats: Amsterdam
+
+  - naam: Expat Rentals
+    url: https://www.expatrentals.eu/country/netherlands/amsterdam
+    link: ^/item/netherlands/amsterdam/[^/]+/[^/]+
+    plaats: Amsterdam
+
+  - naam: Smit & Heinen
+    url: https://www.smitenheinen.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/[^/]+/[^/]+
+
+  - naam: Absolute Housing
+    url: https://absolutehousing.nl/woningaanbod/huur/amsterdam
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Klok Real Estate
+    url: https://www.klokrealestate.nl/woningaanbod/huur/amsterdam
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Heimstaden
+    url: https://heimstaden.com/nl/huurwoningen/?text=Amsterdam
+    link: (?i)^/nl/huurwoningen/amsterdam-
+    plaats: Amsterdam
+
+  - naam: Van der Linden
+    url: https://www.vanderlinden.nl/woning-huren/
+    link: (?i)^/huurwoning/[^/]+-amsterdam/
+    plaats: Amsterdam
+
+  - naam: Verhuurtbeter
+    url: https://www.verhuurtbeter.nl/aanbod
+    link: (?i)^/[^/]+-te-huur/amsterdam/
+    plaats: Amsterdam
+
+  - naam: Rotsvast
+    url: https://www.rotsvast.nl/wonen/
+    link: ^/wonen/object/
+    alleen: Amsterdam
+
+  - naam: Ikwilhuren
+    url: https://ikwilhuren.nu/aanbod/
+    link: ^/object/
+    alleen: Amsterdam
+
+  - naam: Househunting
+    url: https://househunting.nl/woningaanbod/
+    link: (?i)^/woningaanbod/[0-9a-f-]{36}-.*amsterdam/?$
+    plaats: Amsterdam
+
+  - naam: Eefje Voogd
+    url: https://www.eefjevoogd.nl/woningen/
+    link: ^/woningen/(?!page/)[^/]+/?$
+    alleen: huur

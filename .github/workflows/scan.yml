@@ -1,0 +1,47 @@
+name: Woningzoeker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # elke 5 minuten (GitHub kan bij drukte een paar minuten later starten)
+  workflow_dispatch:  # handmatig starten via het tabblad Actions
+
+concurrency:
+  group: woningzoeker
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # het geheugen (welke advertenties al gezien zijn) gaat van scan naar scan mee via de cache
+      - name: Geheugen ophalen
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: geheugen-${{ github.run_id }}
+          restore-keys: geheugen-
+
+      - name: Scannen
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GMAIL_ADRES: ${{ secrets.GMAIL_ADRES }}
+          GMAIL_APP_WACHTWOORD: ${{ secrets.GMAIL_APP_WACHTWOORD }}
+        run: python -m woningzoeker
+
+      - name: Geheugen bewaren
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: geheugen-${{ github.run_id }}
