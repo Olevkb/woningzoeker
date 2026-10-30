@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "*/5 * * * *"  # elke 5 minuten (GitHub kan bij drukte een paar minuten later starten)
   workflow_dispatch:  # handmatig starten via het tabblad Actions
+    inputs:
+      modus:
+        description: "Wat moet hij doen?"
+        type: choice
+        default: scan
+        options:
+          - scan            # normaal: scannen en melden
+          - droog           # scannen, matches alleen in het logboek tonen
+          - test-makelaars  # controleren of elke makelaar nog werkt
 
 concurrency:
   group: woningzoeker
@@ -37,7 +46,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GMAIL_ADRES: ${{ secrets.GMAIL_ADRES }}
           GMAIL_APP_WACHTWOORD: ${{ secrets.GMAIL_APP_WACHTWOORD }}
-        run: python -m woningzoeker
+          MODUS: ${{ inputs.modus || 'scan' }}
+        run: |
+          if [ "$MODUS" = "scan" ]; then python -m woningzoeker; else python -m woningzoeker --$MODUS; fi
 
       - name: Geheugen bewaren
         if: always()
