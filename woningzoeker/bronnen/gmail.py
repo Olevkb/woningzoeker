@@ -82,12 +82,19 @@ class Gmail(Bron):
         if soup is None:
             return []
 
-        kaarten: dict[str, tuple] = {}
+        # eerst van elke link bepalen naar welke advertentie hij wijst (ook via doorstuurlinks)
+        doelen = {}
         for a in soup.find_all("a", href=True):
             echt = self._doel(a["href"], patroon)
-            if not echt or not patroon.search(echt):
+            if echt and patroon.search(echt):
+                doelen[id(a)] = echt
+
+        kaarten: dict[str, tuple] = {}
+        for a in soup.find_all("a", href=True):
+            echt = doelen.get(id(a))
+            if not echt:
                 continue
-            kaart = _kaart(a, soup)
+            kaart = _kaart(a, echt, doelen)
             tekst = kaart.get_text(" ", strip=True)
             if echt not in kaarten or len(tekst) > len(kaarten[echt][1]):
                 img = kaart.find("img")
@@ -149,14 +156,18 @@ def _map_alle_mail(imap) -> str:
     return "INBOX"
 
 
-def _kaart(a, soup):
-    """Het blok rond een link in de e-mail (meestal een tabelcel) met prijs, adres en kenmerken."""
+def _kaart(a, eigen_doel: str, doelen: dict):
+    """Het blok rond een link in de e-mail met prijs, adres en kenmerken van díe woning.
+
+    Zo ver omhoog als kan, maar nooit zo ver dat er een link naar een andere woning in komt.
+    """
     kaart = a
-    for _ in range(8):
+    for _ in range(10):
         ouder = kaart.parent
-        if ouder is None or ouder is soup:
+        if ouder is None or ouder.name in ("body", "html", "[document]"):
             break
-        if len(ouder.get_text(" ", strip=True)) > 600:
+        andere = {doelen[id(x)] for x in ouder.find_all("a", href=True) if id(x) in doelen} - {eigen_doel}
+        if andere or len(ouder.get_text(" ", strip=True)) > 1500:
             break
         kaart = ouder
     return kaart

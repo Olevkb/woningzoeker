@@ -115,6 +115,40 @@ class EmailAlert(unittest.TestCase):
         kamer = next(x for x in woningen if "kinkerstraat" in x.url)
         self.assertEqual(kamer.soort, "kamer")
 
+    def test_budget_per_slaapkamer_geldt_ook_voor_alerts(self):
+        """Een alert tot €4.200 bevat ook dure kleine woningen; die moeten er alsnog uit."""
+        from pathlib import Path
+
+        import yaml
+
+        from woningzoeker.filters import Filter
+
+        cfg = yaml.safe_load((Path(__file__).resolve().parent.parent / "config.yaml").read_text(encoding="utf-8"))
+        kaarten = {
+            "duur-2-slpk": ("€ 4.000 per maand", "85 m² · 2 slaapkamers", False),
+            "4-slpk": ("€ 4.000 per maand", "130 m² · 4 slaapkamers", True),
+            "5-kamers": ("€ 4.000 per maand", "120 m² · 5 kamers", True),  # 5 kamers ≈ 4 slaapkamers
+            "3-slpk-te-duur": ("€ 3.400 per maand", "95 m² · 3 slaapkamers", False),
+            "goedkoop-2-slpk": ("€ 2.450 per maand", "70 m² · 2 slaapkamers", True),
+            "onbekend": ("€ 4.000 per maand", "110 m²", False),  # kamers niet vermeld → budget voor 2
+        }
+        html = "<table>" + "".join(
+            f'<tr><td><a href="https://www.funda.nl/detail/huur/amsterdam/appartement-{slug}-1/43{i:06}/">Appartement Teststraat {i}</a>'
+            f"<p>1071 AB Amsterdam</p><p>{prijs}</p><p>{maten}</p></td></tr>"
+            for i, (slug, (prijs, maten, _)) in enumerate(kaarten.items(), 1)
+        ) + "</table>"
+        bericht = EmailMessage()
+        bericht["From"] = "Funda <noreply@funda.nl>"
+        bericht["Date"] = format_datetime(datetime.now(timezone.utc))
+        bericht.set_content("zie html")
+        bericht.add_alternative(html, subtype="html")
+
+        filt = Filter(cfg)
+        for w in Gmail().uit_bericht(bericht):
+            slug = next(s for s in kaarten if s in w.url)
+            with self.subTest(slug):
+                self.assertEqual(filt.basis(w) is None, kaarten[slug][2], (slug, filt.basis(w)))
+
     def test_funda_link_geeft_adres(self):
         self.assertEqual(
             adres_uit_url("https://www.funda.nl/detail/huur/amsterdam/appartement-weesperzijde-112-h/43123456/"),
