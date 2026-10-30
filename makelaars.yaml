@@ -69,8 +69,8 @@ makelaars:
 
   - naam: Househunting
     url: https://househunting.nl/woningaanbod/
-    link: (?i)^/woningaanbod/[0-9a-f-]{36}-.*amsterdam/?$
-    plaats: Amsterdam
+    link: ^/woningaanbod/[0-9a-f-]{36}-
+    alleen: amsterdam
 
   - naam: Eefje Voogd
     url: https://www.eefjevoogd.nl/woningen/
