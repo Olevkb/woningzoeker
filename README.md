@@ -40,6 +40,14 @@ Je bot-token en app-wachtwoord komen in `.env` (staat niet op GitHub) en als ver
 
 Daarna start de scan vanzelf elke 5 minuten. Je krijgt elke dag een "nog actief"-bericht, en als een site langere tijd niet werkt krijg je een waarschuwing.
 
+## Elke 5 minuten scannen: de externe wekker
+
+GitHubs eigen planner startte bij deze repository geen scans. Daarom geeft cron-job.org (gratis) elke 5 minuten een seintje:
+
+- **Waar:** https://console.cron-job.org, cronjob "Woningzoeker". Die doet een `POST` naar `https://api.github.com/repos/Olevkb/woningzoeker/actions/workflows/scan.yml/dispatches` met body `{"ref":"main"}`.
+- **Sleutel:** een GitHub fine-grained token `woningzoeker-wekker`, met alleen *Actions: Read and write* op deze repository. Hij verloopt na een jaar. Maak dan op https://github.com/settings/personal-access-tokens een nieuwe en vervang hem in de `Authorization`-header (`Bearer <sleutel>`).
+- **Controleren:** in het tabblad **Actions** van de repository hoort elke 5 minuten een scan te staan.
+
 ## Handige commando's
 
 | Commando | Wat |
