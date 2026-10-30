@@ -65,6 +65,10 @@ class Basis(unittest.TestCase):
     def test_kamers_en_m2(self):
         self.assertIsNotNone(self.f.basis(woning(slaapkamers=1)))
         self.assertIsNotNone(self.f.basis(woning(prijs=350, slaapkamers=0)))  # parkeerplek bij Homecrew (30 okt)
+        # aantal kamers onbekend: in de lijst nog niet afwijzen (advertentie komt nog), daarna wel
+        onbekend = woning(slaapkamers=None, kamers=None)
+        self.assertIsNone(self.f.basis(onbekend, voorlopig=True))
+        self.assertEqual(self.f.basis(onbekend), "aantal slaapkamers onbekend")
         self.assertIsNotNone(self.f.basis(woning(slaapkamers=None, kamers=2)))
         self.assertIsNone(self.f.basis(woning(slaapkamers=None, kamers=3)))
         self.assertIsNotNone(self.f.basis(woning(m2=40)))
@@ -155,9 +159,32 @@ class Tekst(unittest.TestCase):
         self.assertTrue(any(l.startswith("⏳") for l in labels), labels)
 
     def test_labels(self):
-        _, labels = self.check("Tijdelijk contract, huurperiode 24 maanden. Gemeubileerd. Jongerencontract.")
-        for verwacht in ("⏳ tijdelijk contract (24 maanden)", "🛋 gemeubileerd", "🎓 jongeren-/campuscontract"):
+        _, labels = self.check("Tijdelijk contract, huurperiode 24 maanden. Jongerencontract.")
+        for verwacht in ("⏳ tijdelijk contract (24 maanden)", "🎓 jongeren-/campuscontract"):
             self.assertTrue(any(l.startswith(verwacht) for l in labels), (verwacht, labels))
+
+    def test_gemeubileerd(self):
+        self.assertEqual(self.check("Overeenkomst Onbepaalde tijd Te huur Oplevering Gemeubileerd")[0], "gemeubileerd")
+        self.assertEqual(self.check("Fully furnished apartment")[0], "gemeubileerd")
+        reden, labels = self.check("Kan gemeubileerd of gestoffeerd worden opgeleverd")  # keuze: wel melden
+        self.assertIsNone(reden)
+        self.assertTrue(any(l.startswith("🛋") for l in labels), labels)
+
+    def test_echte_advertenties_30_oktober(self):
+        """Zinnen uit advertenties die op 30 oktober ten onrechte als melding binnenkwamen."""
+        valeriusstraat = ("Looking for working professionals or retiree; quiet, respectful and looking to call the "
+                          "apartment their 'home'.  No  students will be accepted. Contract will start ASAP.")
+        self.assertIsNotNone(self.check(valeriusstraat)[0])
+        self.assertIsNotNone(self.check("No  students will be accepted.")[0])  # dubbele spatie
+        self.assertIsNotNone(self.check("Looking for working professionals or retiree")[0])
+        self.assertIsNotNone(self.check("De woning zal niet aan delers worden verhuurd.")[0])  # Heemstedestraat
+        self.assertIsNotNone(self.check("- Goede ligging - Niet geschikt om te delen - Inkomenseis 3x de huur")[0])
+        # Kerkstraat: terecht gemeld; 'twee slaapkamers' in woorden, inkomenseis zonder garantsteller → waarschuwing
+        kerkstraat = ("Geschikt voor 2 woningdelers OMSCHRIJVING / INDELING Entree op de derde verdieping; twee "
+                      "slaapkamers aan de achterzijde van de woning. Inkomenseis: netto minimaal 2,5 keer de huurprijs")
+        reden, labels = self.check(kerkstraat)
+        self.assertIsNone(reden)
+        self.assertTrue(labels[0].startswith("⚠️ INKOMENSEIS 2,5× HUUR"), labels)
 
     def test_ongemeubileerd_is_niet_gemeubileerd(self):
         for t in ["Ongemeubileerd appartement", "Unfurnished apartment", "Semi-furnished, un-furnished on request"]:

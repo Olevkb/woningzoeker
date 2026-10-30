@@ -19,6 +19,10 @@ zoeken:
   min_kamers: 3
   min_m2: 45
 
+  # Gemeubileerde woningen: 'uitsluiten' of 'label' (dan wel melden, met 🛋).
+  # Biedt de advertentie ook ongemeubileerd/gestoffeerd aan, dan wordt hij altijd gemeld, met label.
+  gemeubileerd: uitsluiten
+
   # Wijken waar je wilt wonen. Dit zijn de officiële wijknamen (CBS/PDOK).
   # De zoeker zoekt per advertentie op in welke wijk het adres ligt.
   wijken:
@@ -61,14 +65,17 @@ tekst:
   uitsluiten:
     # studenten niet welkom, alleen werkenden, bedrijven of senioren
     - geen studenten\b
-    - niet (geschikt )?voor studenten
-    - studenten (zijn )?niet (welkom|toegestaan)
-    - no students\b
-    - not (suitable )?for students
-    - students? (are )?not (allowed|accepted|welcome)
+    - niet (geschikt )?(voor|aan) studenten
+    - studenten (zijn |worden )?niet (welkom|toegestaan|geaccepteerd)
+    - no students?\b
+    - not (suitable |available )?for students
+    - students? (will |are |is )?(not|never) (be )?(allowed|accepted|welcome|considered)
     - professionals only
-    - only (for )?(working )?professionals
+    - only (for )?(young )?(working )?professionals
+    - (looking for|seeking|searching for|suitable for|preferably|ideal for|intended for|bij voorkeur|op zoek naar|zoeken|gezocht) (an? |a young )?(young )?(working )?professionals?
     - alleen (voor )?werkenden
+    - (geschikt|bedoeld) voor (een )?werkende
+    - expats? only|only (for )?expats?
     - company let\b
     - bedrijfsverhuur
     - alleen via (de |je |uw )?werkgever
@@ -80,15 +87,20 @@ tekst:
     # niet geschikt voor 2 vrienden
     - \b1 persoon\b
     - \b1 person\b
+    - (één|one|single) (persoon|person)\b
     - single occupancy
-    - alleen (geschikt )?voor (een )?(stel|koppel)
+    - (alleen|uitsluitend) (geschikt )?voor (een )?(stel|koppel|echtpaar)
     - \b(couples?|stel) only
     - only (suitable )?for (a )?couples?
     - geen (woning)?delers
-    - niet geschikt voor (woning)?delers
+    - geen (woning)?delen\b
+    - niet (geschikt )?(aan|voor) (woning)?delers
+    - niet geschikt (om te delen|voor (woning)?delen)
+    - (woning)?delen (is )?niet (toegestaan|mogelijk)
     - no (house ?)?sharers
-    - not suitable for (house ?)?shar
+    - not (suitable |available )?for (house ?)?shar(ing|ers)
     - no (house ?)?sharing
+    - sharing (is )?not (allowed|permitted|possible)
     # geen huurtoeslag mogelijk: niet zelfstandig, niet inschrijven, geen echt huurcontract
     - onzelfstandig
     - gedeelde (keuken|badkamer|douche|toilet|sanitair)
@@ -137,7 +149,6 @@ tekst:
   # Neutrale dingen die handig zijn om te weten.
   letop:
     tijdelijk|temporary|(?<!on)bepaalde tijd|fixed[- ]term|diplomatenclausule: "⏳ tijdelijk contract"
-    (?<!on)gemeubileerd|(?<!un)(?<!un-)(?<!semi-)(?<!semi )furnished: "🛋 gemeubileerd (liever niet)"
 
   # Waarschuwingen.
   rode_vlaggen:

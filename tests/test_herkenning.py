@@ -27,6 +27,15 @@ class Tekst(unittest.TestCase):
                 self.assertEqual(t.slaapkamers(tekst), slpk)
                 self.assertEqual(t.kamers(tekst), kamers)
 
+    def test_kamers_in_woorden(self):
+        self.assertEqual(t.slaapkamers("twee slaapkamers aan de achterzijde"), 2)
+        self.assertEqual(t.slaapkamers("Twee ruime slaapkamers"), 2)
+        self.assertEqual(t.slaapkamers("A bright two-bedroom apartment"), 2)
+        self.assertEqual(t.slaapkamers("Lovely 3-bed flat"), 3)
+        self.assertEqual(t.slaapkamers("één slaapkamer en een studeerkamer"), 1)
+        self.assertIsNone(t.slaapkamers("een ruime slaapkamer"))  # 'een' is hier een lidwoord
+        self.assertEqual(t.kamers("Driekamerappartement op de tweede verdieping"), 3)
+
     def test_prijssoort(self):
         gevallen = {
             "€ 2.250 p.m. excl.": "kaal",

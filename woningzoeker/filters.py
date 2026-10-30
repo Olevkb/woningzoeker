@@ -14,6 +14,8 @@ LATER_BESCHIKBAAR = timedelta(days=60)
 _FEE = re.compile(r"bemiddelingskosten|makelaarskosten|contractkosten|agency fee|agent'?s? fee|placement fee|booking fee", re.I)
 _GEEN_FEE_VOOR = re.compile(r"\b(geen|no|zonder|without|free of|gratis)\b[^.]{0,15}$", re.I)
 _GEEN_FEE_NA = re.compile(r"^\s*:?\s*(geen|nvt|n\.v\.t\.|none|nihil|€\s?0\b)", re.I)
+_GEMEUBILEERD = re.compile(r"(?<!on)gemeubileerd|(?<!un)(?<!un-)(?<!semi-)(?<!semi )furnished", re.I)
+_OOK_ONGEMEUBILEERD = re.compile(r"ongemeubileerd|unfurnished|gestoffeerd|upholstered|\bkaal\b|\bshell\b", re.I)
 _DUUR = re.compile(r"(?:huurperiode|rental period|tijdelijk|temporary|contract|lease)[^.]{0,40}?\b(\d{1,2})\s*(maanden|months|jaar|years)\b", re.I)
 
 
@@ -38,6 +40,7 @@ class Filter:
         self.min_slaapkamers = z.get("min_slaapkamers", 0)
         self.min_kamers = z.get("min_kamers", 0)
         self.min_m2 = z.get("min_m2", 0)
+        self.gemeubileerd = z.get("gemeubileerd", "label")
         self.wijken = {x.lower() for x in z.get("wijken") or []}
         self.toeslag = (cfg.get("huurtoeslag") or {}).get("per_maand", 0)
         tk = cfg.get("tekst") or {}
@@ -87,8 +90,12 @@ class Filter:
         if w.slaapkamers is not None:
             if w.slaapkamers < self.min_slaapkamers:
                 return f"{w.slaapkamers} slaapkamer(s)"
-        elif w.kamers is not None and w.kamers < self.min_kamers:
-            return f"{w.kamers} kamer(s)"
+        elif w.kamers is not None:
+            if w.kamers < self.min_kamers:
+                return f"{w.kamers} kamer(s)"
+        elif not voorlopig:
+            # de advertentiepagina is gelezen en nog steeds geen aantal kamers: dan is 2 slaapkamers niet zeker
+            return "aantal slaapkamers onbekend"
         if w.m2 is not None and 0 < w.m2 < self.min_m2:
             return f"te klein ({w.m2} m²)"
         if w.inschrijving is False:
@@ -115,12 +122,20 @@ class Filter:
 
     def tekst(self, w: Woning) -> str | None:
         """Past de uitsluitingen uit config.yaml toe en zet de labels. Geeft de reden van afwijzing of None."""
-        tekst = w.omschrijving or ""
+        # dubbele spaties en regeleindes plat maken: 'No  students' moet ook herkend worden
+        tekst = re.sub(r"\s+", " ", w.omschrijving or "")
         for p in self.uitsluiten:
             if m := p.search(tekst):
                 return f"tekst: '{m.group(0)}'"
 
         labels = list(w.labels)
+        if _GEMEUBILEERD.search(tekst):
+            if _OOK_ONGEMEUBILEERD.search(tekst):
+                labels.append("🛋 gemeubileerd, mogelijk ook zonder meubels: vraag het na")
+            elif self.gemeubileerd == "uitsluiten":
+                return "gemeubileerd"
+            else:
+                labels.append("🛋 gemeubileerd")
         self._inkomen(tekst, labels)
         for p, label in self.labels:
             if p.search(tekst) and label not in labels:
@@ -146,8 +161,6 @@ class Filter:
             labels.append("🚩 bemiddelingskosten voor de huurder: meestal niet toegestaan")
         if any(p.search(tekst) for p in self.oplichting):
             labels.append("🚩 signalen van oplichting: betaal nooit vóór bezichtiging en sleutels")
-        if w.slaapkamers is None and w.kamers is None:
-            labels.append("❓ aantal kamers niet vermeld")
         w.labels = sorted(dict.fromkeys(labels), key=_volgorde)
         return None
 

@@ -23,7 +23,7 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 | 123Wonen | eigen verhuurmakelaar | ✅ |
 | Vastgoed Nederland | aangesloten makelaars | ✅ |
 | Ikwilhuren | aanbod van beleggers | ✅ |
-| Woonnet.nl | huurwoningen van makelaars | ✅ |
+| Woonnet.nl | toont alleen een korte samenvatting zonder bron; voorwaarden niet te controleren | ➖ verwijderd |
 | Huurportaal | zelfde aanbod als Rentola (zelfde advertentiecodes) | ➖ dubbel, overgeslagen |
 | Huurzone | verzamelsite | ✅ |
 | Huurflits | verzamelsite, veel particulieren | 🔧 |

@@ -58,10 +58,16 @@ def prijs_soort(tekst: str, huurprijs: int | None = None) -> str | None:
     return None
 
 
+# getallen in woorden; 'een' bewust niet, dat is meestal een lidwoord ('een ruime slaapkamer')
+_WOORDGETALLEN = {"één": 1, "one": 1, "twee": 2, "two": 2, "drie": 3, "three": 3, "vier": 4, "four": 4, "vijf": 5, "five": 5}
+_WOORDGETAL = r"\b(" + "|".join(_WOORDGETALLEN) + r")"
+
+
 def _eerste(patronen, tekst, laag, hoog) -> int | None:
     for p in patronen:
         for m in re.finditer(p, tekst, re.I):
-            if laag <= (n := int(m.group(1))) <= hoog:
+            n = _WOORDGETALLEN.get(m.group(1).lower()) or int(m.group(1))
+            if laag <= n <= hoog:
                 return n
     return None
 
@@ -81,13 +87,17 @@ def m2(tekst: str) -> int | None:
 def slaapkamers(tekst: str) -> int | None:
     # 0 telt mee: 'Slaapkamers 0' is een studio, parkeerplek of berging
     return _eerste(
-        [_GETAL + r"\s*(?:slaapkamers?|bedrooms?|slpk)\b", r"\b(?:slaapkamers?|bedrooms?)\s*:?\s*(\d{1,2})\b"], tekst, 0, 12
+        [_GETAL + r"\s*(?:slaapkamers?|bedrooms?|slpk)\b", r"\b(?:slaapkamers?|bedrooms?)\s*:?\s*(\d{1,2})\b",
+         _GETAL + r"-bed(?:room)?\b",
+         _WOORDGETAL + r"[\s-]+(?:(?:ruime|grote|kleine|aparte|spacious|large|small|separate|double)\s+)?(?:slaapkamers?|bedrooms?)\b"],
+        tekst, 0, 12,
     )
 
 
 def kamers(tekst: str) -> int | None:
     return _eerste(
-        [r"\b(?:aantal )?kamers\s*:?\s*(\d{1,2})\b", r"\brooms\s*:?\s*(\d{1,2})\b", _GETAL + r"\s*(?:-\s*)?(?:kamers?|rooms?)\b"],
+        [r"\b(?:aantal )?kamers\s*:?\s*(\d{1,2})\b", r"\brooms\s*:?\s*(\d{1,2})\b", _GETAL + r"\s*(?:-\s*)?(?:kamers?|rooms?)\b",
+         _WOORDGETAL + r"[\s-]?kamer"],
         tekst, 1, 15,
     )
 

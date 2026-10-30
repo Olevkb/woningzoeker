@@ -128,10 +128,6 @@ makelaars:
     link: ^/woonruimte/woonruimte/tijdelijk-huren/amsterdam/\d+
     plaats: Amsterdam
 
-  - naam: Woonnet
-    url: https://www.woonnet.nl/huurwoningen/amsterdam
-    link: ^/huurwoning/amsterdam/[^/]+/?$
-    plaats: Amsterdam
 
   - naam: Huurzone
     url: https://www.huurzone.nl/huurwoningen/amsterdam
