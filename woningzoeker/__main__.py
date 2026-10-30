@@ -198,10 +198,19 @@ def test_gmail():
     g = Gmail()
     if not g.adres or not g.wachtwoord:
         sys.exit("GMAIL_ADRES en GMAIL_APP_WACHTWOORD ontbreken in .env")
-    ws = g.zoek(Web())
-    print(f"{len(ws)} advertenties gevonden in de alerts van de afgelopen dagen:")
-    for w in ws:
-        print(f"  {w.bron:15} €{w.prijs} | {w.m2} m² | k{w.kamers} s{w.slaapkamers} | {w.straat} {w.huisnummer} {w.postcode} | {w.url}")
+    # alleen lokaal: een kopie van de alerts, om de inlezer op de echte opmaak af te stemmen (data/ staat niet op GitHub)
+    map_ = MAP / "data" / "alerts"
+    map_.mkdir(parents=True, exist_ok=True)
+    berichten = list(g.berichten())
+    print(f"{len(berichten)} alertmail(s) van Pararius/Funda/Huurwoningen.nl in de afgelopen dagen:\n")
+    for i, bericht in enumerate(berichten, 1):
+        ws = g.uit_bericht(bericht)
+        print(f"{i:2}. {bericht['Date'][:22]} | {str(bericht['From'])[:35]:35} | {str(bericht['Subject'])[:55]} → {len(ws)} woning(en) herkend")
+        for w in ws:
+            print(f"      €{w.prijs} {w.prijs_soort or '?'} | {w.m2} m² | kamers {w.kamers} slpk {w.slaapkamers} | {w.straat} {w.huisnummer} {w.postcode} | {w.url}")
+        (map_ / f"alert-{i:02}.eml").write_bytes(bericht.as_bytes())
+    if berichten:
+        print(f"\nKopieën bewaard in {map_}")
 
 
 def main():

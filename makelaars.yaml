@@ -93,10 +93,6 @@ makelaars:
     link: ^/woningen/[^/]+/?$
     alleen: huur
 
-  - naam: Incity Real Estate
-    url: https://incityrealestate.nl/nl/aanbod
-    link: ^/nl/aanbod/[^/]+$
-    alleen: huur
 
   - naam: HousingNet
     url: https://www.housingnet.nl/woningaanbod/huur

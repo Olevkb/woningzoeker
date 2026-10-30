@@ -49,15 +49,16 @@ class Gmail(Bron):
             log.info("Gmail: nog niet gekoppeld (GMAIL_ADRES / GMAIL_APP_WACHTWOORD ontbreken), overgeslagen.")
             return []
         uit = []
-        for bericht in self._berichten():
+        for bericht in self.berichten():
             uit.extend(self.uit_bericht(bericht))
         return uit
 
-    def _berichten(self):
+    def berichten(self):
+        """Alerts van de afgelopen dagen, uit 'Alle e-mail' (dus ook als Gmail ze in een tabblad of archief zet)."""
         afzenders = " OR ".join(f"from:{d}" for d in PORTALEN)
         with imaplib.IMAP4_SSL("imap.gmail.com") as imap:
             imap.login(self.adres, self.wachtwoord)
-            imap.select("INBOX", readonly=True)
+            imap.select(_map_alle_mail(imap), readonly=True)
             status, data = imap.uid("search", None, "X-GM-RAW", f'"newer_than:{ZOEK_DAGEN}d ({afzenders})"')
             if status != "OK":
                 raise RuntimeError(f"zoeken in Gmail mislukt: {status}")
@@ -135,6 +136,17 @@ class Gmail(Bron):
             pass
         self._omleidingen[href] = doel
         return doel
+
+
+def _map_alle_mail(imap) -> str:
+    """Naam van de map 'Alle e-mail'; die verschilt per taal ([Gmail]/All Mail, [Gmail]/Alle e-mail, ...)."""
+    status, mappen = imap.list()
+    for regel in mappen or []:
+        regel = regel.decode(errors="replace")
+        if "\\All" in regel:
+            naam = regel.rsplit(' "/" ', 1)[-1].strip()
+            return naam if naam.startswith('"') else f'"{naam}"'
+    return "INBOX"
 
 
 def _kaart(a, soup):

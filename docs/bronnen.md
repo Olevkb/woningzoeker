@@ -56,13 +56,13 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 
 ## 4. Verhuurmakelaars
 
-**✅ Draait (21):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, Incity Real Estate, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
+**✅ Draait (20):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
 
 **🔧 Bleek bij het toevoegen toch maatwerk (4):** Friedmann Housing, ADD Makelaardij, DSTRCT, Carla van den Brink: hun aanbod wordt pas later in de pagina geladen.
 
 **🔧 Maatwerk (3):** PCW Housing, vb&t Verhuurmakelaars, Amsterdam Beautiful.
 
-**⛔ Blokkeren scripts (8):** Domica, Broersma, MVA, Amsterdam Housing, Housing Experts, Koops Expat Services, My Home Amsterdam, Homes for Expats. Deze zetten hun aanbod vrijwel altijd ook op Pararius of Funda, dus via de e-mailalerts komen ze toch binnen.
+**⛔ Blokkeren scripts (9):** Incity Real Estate (alleen servers zoals GitHub), Domica, Broersma, MVA, Amsterdam Housing, Housing Experts, Koops Expat Services, My Home Amsterdam, Homes for Expats. Deze zetten hun aanbod vrijwel altijd ook op Pararius of Funda, dus via de e-mailalerts komen ze toch binnen.
 
 **➖ Geen eigen aanbod online (11):** Housing & Co, Urbs Living, The Brickory, Expat Home Finders, Amsterdam Life Homes, Solid Net, City Retreat, AmsterdamStay, Makelaardij & Co, Vastgoed & Co, Relocify. Dit zijn zoekdiensten (je betaalt ze om voor je te zoeken) of ze richten zich alleen op verhuurders.
 
