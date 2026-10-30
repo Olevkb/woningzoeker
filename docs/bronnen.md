@@ -56,7 +56,7 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 
 ## 4. Verhuurmakelaars
 
-**✅ Draait (22):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, Incity Real Estate, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
+**✅ Draait (21):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, Incity Real Estate, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
 
 **🔧 Bleek bij het toevoegen toch maatwerk (4):** Friedmann Housing, ADD Makelaardij, DSTRCT, Carla van den Brink: hun aanbod wordt pas later in de pagina geladen.
 
