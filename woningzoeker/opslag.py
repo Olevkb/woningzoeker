@@ -33,6 +33,12 @@ class Opslag:
             );
             """
         )
+        kolommen = {r[1] for r in self.db.execute("PRAGMA table_info(gezien)")}
+        for kolom in ("adres", "bron"):  # toegevoegd na de eerste versie
+            if kolom not in kolommen:
+                self.db.execute(f"ALTER TABLE gezien ADD COLUMN {kolom} TEXT")
+        self.db.execute("CREATE INDEX IF NOT EXISTS gezien_adres ON gezien(adres)")
+        self.db.commit()
 
     def is_leeg(self) -> bool:
         return self.db.execute("SELECT 1 FROM gezien LIMIT 1").fetchone() is None
@@ -40,18 +46,20 @@ class Opslag:
     def is_gezien(self, sleutel: str) -> bool:
         return self.db.execute("SELECT 1 FROM gezien WHERE sleutel = ?", (sleutel,)).fetchone() is not None
 
-    def al_gemeld_elders(self, w: Woning, dagen: int) -> bool:
+    def elders(self, w: Woning, dagen: int) -> tuple[str, bool, str] | None:
+        """Dezelfde woning op een andere site (zelfde straat + prijs, of zelfde adres): (bron, gemeld, reden)."""
         grens = (datetime.now() - timedelta(days=dagen)).isoformat()
         rij = self.db.execute(
-            "SELECT 1 FROM gezien WHERE dubbel = ? AND gemeld = 1 AND sleutel != ? AND tijd > ?",
-            (w.dubbel_sleutel, w.sleutel, grens),
+            "SELECT bron, gemeld, reden FROM gezien WHERE (dubbel = ? OR (adres != '' AND adres = ?)) "
+            "AND bron != ? AND tijd > ? ORDER BY gemeld DESC, tijd DESC LIMIT 1",
+            (w.dubbel_sleutel, w.adres_sleutel, w.bron, grens),
         ).fetchone()
-        return rij is not None
+        return (rij[0], bool(rij[1]), rij[2] or "") if rij else None
 
     def markeer(self, w: Woning, gemeld: bool, reden: str = ""):
         self.db.execute(
-            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, gemeld, reden, url, tijd) VALUES (?, ?, ?, ?, ?, ?)",
-            (w.sleutel, w.dubbel_sleutel, int(gemeld), reden, w.url, datetime.now().isoformat()),
+            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, adres, bron, gemeld, reden, url, tijd) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (w.sleutel, w.dubbel_sleutel, w.adres_sleutel, w.bron, int(gemeld), reden, w.url, datetime.now().isoformat()),
         )
         self.db.commit()
 

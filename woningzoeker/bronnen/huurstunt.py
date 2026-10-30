@@ -3,6 +3,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from .. import tekst as t
 from ..model import Woning, getal, postcode_schoon
 from ..web import Web, jsonld, zoek_type
 from . import Bron, tijdstip
@@ -41,7 +42,7 @@ class Huurstunt(Bron):
                     straat=delen[1] if len(delen) > 1 else "",
                     plaats=m.group(1) if m else "",
                     prijs=getal((item.get("offers") or {}).get("price")),
-                    prijs_incl=True if "incl" in naam.lower() else False if "excl" in naam.lower() else None,
+                    prijs_soort="service" if "incl" in naam.lower() else "kaal" if "excl" in naam.lower() else None,
                     kamers=kamers,
                     m2=m2,
                     soort=SOORTEN.get(soort, soort),
@@ -86,3 +87,4 @@ class Huurstunt(Bron):
             w.slaapkamers = int(m.group(1))
         if m := re.search(r"Aantal kamers:\s*(\d+)", tekst):
             w.kamers = int(m.group(1))
+        t.vul_aan(w, w.omschrijving, ook_prijs=False)

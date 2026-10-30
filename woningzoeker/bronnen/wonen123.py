@@ -3,6 +3,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
+from .. import tekst as t
 from ..model import Woning, getal
 from ..web import Web
 from . import Bron
@@ -57,10 +58,10 @@ class Wonen123(Bron):
         blokken = [b for b in blokken if "Huurprijs:" in b and len(b) > 300]
         if blokken:
             w.omschrijving = min(blokken, key=len)
-            # "inclusief warmte, exclusief elektra" telt als excl. (strengste grens)
-            if m := re.search(r"Huurprijs:(.*?)(Servicekosten|Waarborgsom|$)", w.omschrijving, re.I):
-                zin = m.group(1).lower()
-                w.prijs_incl = False if "exclusief" in zin else True if "inclusief" in zin else None
+            # bv. "Huurprijs: € 2.500,- per maand, inclusief warmte, exclusief elektra" → kaal (strengste grens)
+            if m := re.search(r"Huurprijs:.*?(?=Servicekosten|Waarborgsom|$)", w.omschrijving, re.I):
+                w.prijs_soort = t.prijs_soort(m.group(0), w.prijs) or w.prijs_soort
+            t.vul_aan(w, w.omschrijving, ook_prijs=False)
 
 
 def _datum(tekst: str | None) -> datetime | None:

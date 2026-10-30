@@ -6,7 +6,7 @@ Scant elke 5 minuten huursites, makelaars en e-mailalerts op nieuwe huurwoningen
 
 **Huurportalen**: Rentola, Huurstunt, Kamernet, 123Wonen.
 
-**Makelaars en verhuurders** (`makelaars.yaml`): Hausing, Expat Housing, Vastgoed Nederland, Expat Rentals, Smit & Heinen, Absolute Housing, Klok Real Estate, Heimstaden, Van der Linden, Verhuurtbeter, Rotsvast, Ikwilhuren, Househunting, Eefje Voogd.
+**Makelaars, verhuurders en verzamelsites** (`makelaars.yaml`): 27 bronnen, waaronder Hausing, Van der Linden, JLG, Homecrew, HousingNet, Vastgoed Nederland, Woonnet, Huurzone en Kamer.nl. Het volledige overzicht, ook van wat (nog) niet lukt, staat in `docs/bronnen.md`.
 
 **E-mailalerts** van sites die scripts blokkeren: Pararius, Funda, Huurwoningen.nl. De zoeker leest je Gmail (alleen lezen, hij verwijdert of verplaatst niets) en haalt de alerts door dezelfde filters.
 
@@ -16,13 +16,15 @@ Elke site wordt beleefd benaderd: de zoeker houdt zich aan robots.txt, vraagt ni
 
 Maak op elke site een account met je Gmail-adres, zoek op Amsterdam, huur, tot €2.900, 2+ slaapkamers, en sla de zoekopdracht op met e-mailmelding **direct** (niet dagelijks). Stel de alerts gerust breder in dan nodig: de zoeker filtert zelf op wijk, prijs en voorwaarden.
 
-## Wat er gefilterd wordt (`config.yaml`)
+## Wat er gefilterd wordt
 
-- Max €2.600 excl. of €2.900 incl. per maand (onbekend = €2.600)
-- Minimaal 2 slaapkamers (3 kamers), minimaal 45 m²
-- Alleen jullie wijken: Centrum (incl. Jordaan, Haarlemmerbuurt, Plantage), De Pijp, Zuid en Weesperzijde (Amstel tot Wibautstraat). De wijk wordt per adres opgezocht bij PDOK, de officiële adressendienst van de overheid.
-- Overgeslagen: "geen studenten", "geen woningdelers", "inschrijving niet mogelijk", "max 1 persoon", "professionals only" (en Engelse varianten)
-- Labels: 🎓 studenten welkom, 🤝 garantsteller, 👥 delers toegestaan, ⏳ tijdelijk, 🛋 gemeubileerd, 💼 inkomenseis, 🚩 mogelijke oplichting
+De volledige eisen met uitleg staan in `docs/eisen.md`, de instellingen in `config.yaml`. Kort:
+
+- **Budget per aantal bewoners** (€525 huurtoeslag voor de hele woning): 2 slaapkamers max €2.600 kale huur, 3 max €3.250, 4 max €4.200.
+- **Minimaal 2 slaapkamers en 45 m²**, in jullie wijken: Centrum (incl. Jordaan, Haarlemmerbuurt, Plantage), De Pijp, Zuid en Weesperzijde (Amstel tot Wibautstraat). De wijk wordt per adres opgezocht bij PDOK, de officiële adressendienst van de overheid.
+- **Overgeslagen:** geen huurtoeslag mogelijk (kamer, gedeelde keuken/badkamer, antikraak, niet inschrijven), geen studenten of alleen werkenden, niet voor vrienden ("max 1 persoon", "alleen een stel"), garantsteller uitgesloten, short stay.
+- **Inkomenseis zonder garantsteller:** wel gemeld, met een grote waarschuwing bovenaan.
+- **Labels:** 🤝 garantsteller mogelijk, ⏳ tijdelijk, 🛋 gemeubileerd, 🏷 middenhuur (vergunning nodig), 📅 later beschikbaar, 👥 alleen met extra huisgenoot, 🚩 borg/bemiddelingskosten/onderhuur/oplichting, ❔ alleen uit e-mailalert bekend.
 
 Aanpassen kan op GitHub zelf: open `config.yaml`, klik op het potloodje, wijzig en klik op *Commit changes*. De volgende scan gebruikt het meteen.
 

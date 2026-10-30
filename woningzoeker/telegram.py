@@ -58,7 +58,9 @@ def hoe_lang_geleden(moment: datetime | None) -> str:
 
 def opmaak(w: Woning, cfg: dict) -> str:
     e = html.escape
-    regels = [f"🏠 <b>{e(w.adres or w.straat or 'Woning')}</b>"]
+    # grote waarschuwingen (⚠️) bovenaan, vetgedrukt
+    regels = [f"<b>{e(label)}</b>" for label in w.labels if label.startswith("⚠️")]
+    regels.append(f"🏠 <b>{e(w.adres or w.straat or 'Woning')}</b>")
     plek = [w.wijk] if w.wijk else []
     if w.buurt and w.buurt != w.wijk:
         plek.append(w.buurt)
@@ -66,13 +68,12 @@ def opmaak(w: Woning, cfg: dict) -> str:
         regels.append(f"📍 {e(' · '.join(plek))}")
 
     if w.prijs:
-        soort = {True: " incl.", False: " excl."}.get(w.prijs_incl, "")
-        prijs = f"💶 <b>{euro(w.prijs)}</b>{soort}"
-        toeslag = cfg.get("huurtoeslag") or {}
-        if toeslag.get("per_maand") and toeslag.get("personen"):
-            pp = (w.prijs - toeslag["per_maand"]) / toeslag["personen"]
-            prijs += f" · ≈ {euro(pp)} p.p. na toeslag"
-        regels.append(prijs)
+        soort = {"kaal": " kale huur", "service": " incl. servicekosten", "alles": " incl. alles"}.get(w.prijs_soort, " (incl./excl. onbekend)")
+        regels.append(f"💶 <b>{euro(w.prijs)}</b>{soort}")
+        toeslag = (cfg.get("huurtoeslag") or {}).get("per_maand", 0)
+        slaapkamers = w.slaapkamers or (w.kamers - 1 if w.kamers else 2)
+        pp = [f"{euro((w.prijs - toeslag) / n)} p.p. met {n}" for n in (2, 3) if n <= max(2, slaapkamers)]
+        regels.append(f"👤 ≈ {' · '.join(pp)} (na €{toeslag} toeslag)")
 
     maten = []
     if w.kamers:
@@ -87,5 +88,5 @@ def opmaak(w: Woning, cfg: dict) -> str:
     bron = f"via {e(w.bron)}"
     geleden = hoe_lang_geleden(w.geplaatst)
     regels.append(f"🕒 {geleden + ' · ' if geleden else ''}{bron}")
-    regels.extend(e(label) for label in w.labels)
+    regels.extend(e(label) for label in w.labels if not label.startswith("⚠️"))
     return "\n".join(regels)

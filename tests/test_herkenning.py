@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from woningzoeker import tekst as t
 from woningzoeker.bronnen.gmail import Gmail
-from woningzoeker.bronnen.makelaar import _adres_uit_url
+from woningzoeker.bronnen.makelaar import adres_uit_url
 
 
 class Tekst(unittest.TestCase):
@@ -27,11 +27,42 @@ class Tekst(unittest.TestCase):
                 self.assertEqual(t.slaapkamers(tekst), slpk)
                 self.assertEqual(t.kamers(tekst), kamers)
 
-    def test_incl_excl_en_postcode(self):
-        self.assertFalse(t.incl_excl("€ 2.250 p.m. excl."))
-        self.assertTrue(t.incl_excl("€ 2.250 per maand inclusief servicekosten"))
+    def test_prijssoort(self):
+        gevallen = {
+            "€ 2.250 p.m. excl.": "kaal",
+            "€ 2850 excl. utilities": "kaal",
+            "€ 2.250 per maand inclusief servicekosten": "service",
+            "€ 2.250 incl. servicekosten, excl. g/w/e": "service",
+            "€ 1.950 all-in": "alles",
+            "€ 1.950 incl. gas, water en licht": "alles",
+            "€ 1.950 incl.": "service",
+            "€ 1.950 per maand": None,
+            "Borg € 5.000 excl. | Huur € 2.100 incl. servicekosten": "service",  # kijkt naar het huurbedrag
+        }
+        for tekst, soort in gevallen.items():
+            with self.subTest(tekst=tekst):
+                self.assertEqual(t.prijs_soort(tekst, t.prijs(tekst)), soort)
+
+    def test_postcode(self):
         self.assertEqual(t.postcode("Weesperzijde 12, 1091 EL Amsterdam"), "1091EL")
         self.assertEqual(t.postcode("€ 2450 PM"), "")  # bedrag is geen postcode
+
+    def test_datums(self):
+        self.assertEqual(t.beschikbaar("Beschikbaar per 01-12-2026"), datetime(2026, 12, 1))
+        self.assertEqual(t.beschikbaar("Available from 1 January 2027"), datetime(2027, 1, 1))
+        self.assertEqual(t.beschikbaar("Beschikbaarheid: februari 2027"), datetime(2027, 2, 1))
+        self.assertEqual(t.beschikbaar("Ingangsdatum: 2026-11-15"), datetime(2026, 11, 15))
+        self.assertEqual(t.beschikbaar("Beschikbaar: per direct").date(), datetime.now().date())
+        self.assertIsNone(t.beschikbaar("Bouwjaar 1930"))
+
+    def test_borg(self):
+        self.assertEqual(t.borg_maanden("Waarborgsom: 2 maanden kale huur", 2000), 2.0)
+        self.assertEqual(t.borg_maanden("Deposit € 6.000", 2000), 3.0)
+        self.assertIsNone(t.borg_maanden("Geen vermelding", 2000))
+
+    def test_adres_zonder_voorvoegsel(self):
+        self.assertEqual(t.adres("Appartement Weesperzijde 112"), ("Weesperzijde", "112"))
+        self.assertEqual(t.adres("Nieuw Jacob Catskade 35F"), ("Jacob Catskade", "35F"))
 
     def test_verhuurd(self):
         self.assertTrue(t.is_verhuurd("Onder optie | 1059 AW Amsterdam"))
@@ -52,7 +83,7 @@ class AdresUitLink(unittest.TestCase):
         }
         for url, verwacht in gevallen.items():
             with self.subTest(url=url):
-                self.assertEqual(_adres_uit_url(url), verwacht)
+                self.assertEqual(adres_uit_url(url), verwacht)
 
 
 class EmailAlert(unittest.TestCase):
@@ -77,9 +108,18 @@ class EmailAlert(unittest.TestCase):
         self.assertEqual(w.bron, "Pararius")
         self.assertEqual(w.url, "https://www.pararius.nl/appartement-te-huur/amsterdam/1a2b3c4d/weesperzijde")
         self.assertEqual((w.prijs, w.m2, w.kamers, w.postcode, w.plaats), (2300, 78, 3, "1091EL", "Amsterdam"))
+        self.assertEqual((w.straat, w.huisnummer), ("Weesperzijde", "112"))
         self.assertEqual(w.foto, "https://casco.pararius.nl/foto.jpg")
+        self.assertIn("€ 2.300 per maand", w.omschrijving)  # de tekst uit de mail gaat door de tekstfilters
+        self.assertTrue(w.labels[0].startswith("❔ via Pararius-alert"))
         kamer = next(x for x in woningen if "kinkerstraat" in x.url)
         self.assertEqual(kamer.soort, "kamer")
+
+    def test_funda_link_geeft_adres(self):
+        self.assertEqual(
+            adres_uit_url("https://www.funda.nl/detail/huur/amsterdam/appartement-weesperzijde-112-h/43123456/"),
+            ("Weesperzijde", "112-h", ""),
+        )
 
 
 if __name__ == "__main__":

@@ -1,24 +1,26 @@
-# Woningzoeker – jouw zoekcriteria
+# Woningzoeker – jouw zoekcriteria (zie docs/eisen.md voor de uitleg)
 # Pas dit bestand aan en de zoeker gebruikt het bij de volgende scan.
 
 zoeken:
   plaats: Amsterdam
 
-  # Maximale huur voor de hele woning per maand.
-  # "excl." = kale huur zonder servicekosten/GWL, "incl." = alles erbij.
-  # Staat er niet bij welke het is, dan geldt de strengste grens (excl.).
-  max_huur_excl: 2600
-  max_huur_incl: 2900
+  # Maximale huur per aantal bewoners (= aantal slaapkamers). De €525 huurtoeslag is voor de hele woning.
+  #   kaal    = kale huur, servicekosten komen erbij
+  #   service = prijs inclusief servicekosten, zonder gas/water/licht
+  #   alles   = prijs inclusief alles, ook gas/water/licht
+  # Staat er niet bij wat voor prijs het is, dan geldt 'kaal' (de strengste).
+  budget:
+    2: {kaal: 2600, service: 2750, alles: 2925}  # 2 × €1.200 + €525
+    3: {kaal: 3250, service: 3400, alles: 3525}  # 3 × €1.000 + €525
+    4: {kaal: 4200, service: 4350, alles: 4525}  # 4 × €1.000 + €525
 
-  # Minimaal 2 slaapkamers = minimaal 3 kamers totaal (woonkamer telt mee).
-  # Meer kamers is ook goed.
+  # Minimaal 2 slaapkamers; staat alleen het aantal kamers erbij, dan minimaal 3 (woonkamer telt mee).
   min_slaapkamers: 2
   min_kamers: 3
   min_m2: 45
 
   # Wijken waar je wilt wonen. Dit zijn de officiële wijknamen (CBS/PDOK).
   # De zoeker zoekt per advertentie op in welke wijk het adres ligt.
-  # Haal een # weg om een wijk toe te voegen, of zet er een # voor om hem uit te zetten.
   wijken:
     # --- Centrum ---
     - Haarlemmerbuurt
@@ -30,7 +32,6 @@ zoeken:
     - Nieuwmarkt/Lastage
     - De Weteringschans
     - Weesperbuurt/Plantage
-    - Oostelijke Eilanden/Kadijken
     # --- De Pijp ---
     - Oude Pijp
     - Nieuwe Pijp
@@ -47,60 +48,100 @@ zoeken:
     - Rijnbuurt
     - Prinses Irenebuurt e.o.
     - Zuidas
-    # - Buitenveldert-West
-    # - Buitenveldert-Oost
     # --- Oost: strook tussen Amstel en Wibautstraat ---
     - Weesperzijde
-    # --- Uitbreidingen die je misschien later wilt ---
-    # - Oosterparkbuurt
-    # - Vondelparkbuurt
-    # - Helmersbuurt
-    # - Spaarndammerbuurt/Zeeheldenbuurt
 
 huurtoeslag:
-  # Wordt alleen gebruikt om in de melding een prijs per persoon te tonen.
-  per_maand: 525
-  personen: 2
+  per_maand: 525  # voor de hele woning; de melding deelt dit door het aantal bewoners
 
 # Teksten in de advertentie. Elke regel is een zoekpatroon (hoofdletters maken niet uit).
+# Alleen wat expliciet in de advertentie staat telt; staat er niets, dan valt hij niet af.
 tekst:
   # Advertentie wordt OVERGESLAGEN als een van deze patronen erin staat.
   uitsluiten:
-    - geen studenten
+    # studenten niet welkom, alleen werkenden, bedrijven of senioren
+    - geen studenten\b
     - niet (geschikt )?voor studenten
     - studenten (zijn )?niet (welkom|toegestaan)
-    - no students
+    - no students\b
     - not (suitable )?for students
-    - students? (are )?not allowed
+    - students? (are )?not (allowed|accepted|welcome)
+    - professionals only
+    - only (for )?(working )?professionals
+    - alleen (voor )?werkenden
+    - company let\b
+    - bedrijfsverhuur
+    - alleen via (de |je |uw )?werkgever
+    - only (through|via) (an? |your )?employer
+    - \b55\+
+    - 55 jaar (of|en) ouder
+    - seniorenwoning
+    - senioren(complex|appartement)
+    # niet geschikt voor 2 vrienden
+    - \b1 persoon\b
+    - \b1 person\b
+    - single occupancy
+    - alleen (geschikt )?voor (een )?(stel|koppel)
+    - \b(couples?|stel) only
+    - only (suitable )?for (a )?couples?
     - geen (woning)?delers
     - niet geschikt voor (woning)?delers
     - no (house ?)?sharers
     - not suitable for (house ?)?shar
     - no (house ?)?sharing
-    - inschrijv\w* (is )?niet mogelijk
+    # geen huurtoeslag mogelijk: niet zelfstandig, niet inschrijven, geen echt huurcontract
+    - onzelfstandig
+    - gedeelde (keuken|badkamer|douche|toilet|sanitair)
+    - \b(keuken|badkamer|toilet|douche|sanitair|huiskamer|woonkamer)\s*:?\s*gedeeld
+    - huurtoeslag( mogelijk)?\s*:?\s*(niet mogelijk|nee)\b
+    - shared (kitchen|bathroom|toilet)
+    - anti-?kraak
+    - leegstand(s)?beheer
+    - bruikleen(overeenkomst|contract)
+    - inschrijv\w* (is )?niet (mogelijk|toegestaan)
     - geen inschrijving
     - registration (is )?not (possible|allowed)
     - no registration
     - not possible to register
-    - \b1 persoon\b
-    - \b1 person\b
-    - single occupancy
-    - professionals only
-    - only (for )?(working )?professionals
-    - alleen (voor )?werkenden
+    # garantsteller expliciet uitgesloten
+    - geen garantstellers?\b(?!\s+(nodig|vereist|noodzakelijk|verplicht))
+    - garantstell\w* (is |zijn |wordt |worden )?niet (mogelijk|toegestaan|geaccepteerd)
+    - \bno guarantors?\b(?!\s+(needed|required))
+    - guarantors? (are |is )?not (accepted|allowed|possible)
+    - eigen inkomen (is )?(vereist|verplicht|noodzakelijk)
+    - own income (is )?required
+    # short stay (korter dan 6 maanden)
+    - short[- ]stay
+    - kortdurend verblijf
+    - (huurperiode|rental period|lease term|contractduur)\s*:?\s*(max(imaal|imum)?\.?\s*)?[1-5]\s*(maanden|months)\b
+
+  # Inkomenseis: met garantsteller erbij → 🤝, zonder → grote waarschuwing bovenaan.
+  inkomenseis:
+    - '\b([2-5](?:[.,]\d)?) ?(?:x|×|keer|maal|times) (?:de |het |the )?(?:kale |bruto |gross |netto |monthly |maand)*(?:huur|rent|huurprijs|maandhuur|inkomen|income)'
+    - inkomenseis
+    - income requirements?
+    - (minimum|gross) (monthly |annual )?income of
+    - inkomen van (minimaal|ten minste|minstens)
+  garantsteller:
+    - garantste
+    - garantiestel
+    - borgsteller
+    - guarant(or|ee)
 
   # Positieve punten: komen als label in de melding.
   pluspunten:
-    studenten (zijn )?(welkom|toegestaan): "🎓 studenten welkom"
-    students? (are )?(welcome|allowed): "🎓 studenten welkom"
-    garantste|guarantor: "🤝 garantsteller genoemd"
+    studenten (zijn )?(welkom|toegestaan)|students? (are )?(welcome|allowed): "🎓 studenten welkom"
+    jongerencontract|campuscontract|jongerenwoning|studentencontract: "🎓 jongeren-/campuscontract"
     (woning)?delers (welkom|toegestaan|mogelijk)|suitable for (house ?)?shar|sharers (welcome|allowed)|delen (is )?toegestaan: "👥 delers toegestaan"
 
   # Neutrale dingen die handig zijn om te weten.
   letop:
-    tijdelijk|temporary|bepaalde tijd|fixed[- ]term|maximaal \d+ maanden|max\.? \d+ months: "⏳ tijdelijk contract"
-    (?<!on)gemeubileerd|(?<!un)(?<!un-)(?<!semi-)(?<!semi )furnished: "🛋 gemeubileerd"
-    \b[345] ?x (het |de |bruto |gross )?(maand)?(inkomen|huur|income|rent)|inkomenseis|income requirement|gross (monthly )?income: "💼 inkomenseis genoemd"
+    tijdelijk|temporary|(?<!on)bepaalde tijd|fixed[- ]term|diplomatenclausule: "⏳ tijdelijk contract"
+    (?<!on)gemeubileerd|(?<!un)(?<!un-)(?<!semi-)(?<!semi )furnished: "🛋 gemeubileerd (liever niet)"
+
+  # Waarschuwingen.
+  rode_vlaggen:
+    onderhuur|onderverhuur|\bsublet|sub-let: "🚩 onderhuur: check of de eigenaar toestemming geeft"
 
   # Signalen van mogelijke oplichting.
   oplichting:
@@ -113,17 +154,18 @@ tekst:
     - airbnb (betaling|payment)
 
 scan:
-  # Hoe vaak de zoeker kijkt (in minuten). 's Nachts (00:00–07:00) minder vaak.
+  # Hoe vaak de zoeker kijkt (in minuten), als hij lokaal met --loop draait. Op GitHub: elke 5 minuten.
   interval_minuten: 5
   nacht_interval_minuten: 20
-  # 'makelaars' = alle makelaars uit makelaars.yaml, 'gmail' = de e-mailalerts van Pararius/Funda/Huurwoningen.nl
+  # 'makelaars' = alle bronnen uit makelaars.yaml. 'gmail' (de e-mailalerts) staat bewust als laatste:
+  # dan zijn de makelaars al bekeken en kan een alert gekoppeld worden aan de advertentie van de makelaar.
   bronnen:
-    - gmail
     - makelaars
     - rentola
     - huurstunt
     - kamernet
     - 123wonen
+    - gmail
   # Bij de allereerste scan alleen advertenties melden die niet ouder zijn dan dit.
   eerste_scan_max_uren: 48
   # Nooit meer dan dit aantal meldingen per scan (tegen een stortvloed).

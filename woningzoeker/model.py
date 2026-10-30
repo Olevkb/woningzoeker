@@ -2,6 +2,10 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
+# Wat er in de prijs zit: "kaal" (servicekosten komen erbij), "service" (incl. servicekosten),
+# "alles" (incl. gas/water/licht) of None (niet vermeld → telt als kaal).
+PRIJSSOORTEN = ("kaal", "service", "alles")
+
 
 @dataclass
 class Woning:
@@ -15,12 +19,14 @@ class Woning:
     lat: float | None = None
     lon: float | None = None
     prijs: int | None = None
-    prijs_incl: bool | None = None  # True = incl., False = excl., None = onbekend
+    prijs_soort: str | None = None
     kamers: int | None = None
     slaapkamers: int | None = None
     m2: int | None = None
     soort: str = ""  # appartement, huis, kamer, studio, ...
     geplaatst: datetime | None = None
+    beschikbaar: datetime | None = None  # ingangsdatum
+    einddatum: datetime | None = None  # bij tijdelijke huur
     foto: str = ""
     omschrijving: str = ""
     inschrijving: bool | None = None
@@ -42,8 +48,17 @@ class Woning:
     @property
     def dubbel_sleutel(self) -> str:
         """Herkent dezelfde woning op verschillende sites (straat + prijs)."""
-        straat = re.sub(r"[^a-z]", "", self.straat.lower())
-        return f"{straat}|{self.prijs}"
+        return f"{_plat(self.straat)}|{self.prijs}"
+
+    @property
+    def adres_sleutel(self) -> str:
+        """Straat + huisnummer (alleen het getal), leeg als het huisnummer onbekend is."""
+        nr = re.match(r"\d+", self.huisnummer or "")
+        return f"{_plat(self.straat)}|{nr.group(0)}" if nr and self.straat else ""
+
+
+def _plat(tekst: str) -> str:
+    return re.sub(r"[^a-z]", "", (tekst or "").lower())
 
 
 def postcode_schoon(tekst: str | None) -> str:

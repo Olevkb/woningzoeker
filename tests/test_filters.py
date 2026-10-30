@@ -1,11 +1,11 @@
-"""Controleert de filters. Draaien met: python -m unittest -v
+"""Controleert de eisen uit docs/eisen.md. Draaien met: python -m unittest -v
 
 De wijktests vragen PDOK om echte adressen op en hebben dus internet nodig.
 """
 
-import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -20,37 +20,73 @@ CFG = yaml.safe_load((Path(__file__).resolve().parent.parent / "config.yaml").re
 
 
 def woning(**kw) -> Woning:
-    basis = dict(bron="test", id="1", url="https://example.org", plaats="Amsterdam", prijs=2400, kamers=3, m2=70)
+    basis = dict(bron="test", id="1", url="https://example.org", plaats="Amsterdam", prijs=2400, slaapkamers=2, m2=70)
     return Woning(**{**basis, **kw})
+
+
+class Budget(unittest.TestCase):
+    """Budget per aantal bewoners (eisen 1)."""
+
+    f = Filter(CFG)
+
+    def test_twee_personen(self):
+        self.assertIsNone(self.f.basis(woning(prijs=2600)))
+        self.assertIsNotNone(self.f.basis(woning(prijs=2650)))  # onbekend = kale huur
+        self.assertIsNotNone(self.f.basis(woning(prijs=2650, prijs_soort="kaal")))
+        self.assertIsNone(self.f.basis(woning(prijs=2700, prijs_soort="service")))
+        self.assertIsNone(self.f.basis(woning(prijs=2900, prijs_soort="alles")))
+        self.assertIsNotNone(self.f.basis(woning(prijs=2950, prijs_soort="alles")))
+
+    def test_meer_slaapkamers(self):
+        self.assertIsNone(self.f.basis(woning(prijs=3250, slaapkamers=3)))
+        self.assertIsNotNone(self.f.basis(woning(prijs=3300, slaapkamers=3)))
+        self.assertIsNone(self.f.basis(woning(prijs=4200, slaapkamers=4)))
+        self.assertIsNone(self.f.basis(woning(prijs=4200, slaapkamers=6)))  # meer dan 4: budget van 4
+        self.assertIsNotNone(self.f.basis(woning(prijs=4300, slaapkamers=6)))
+        self.assertIsNone(self.f.basis(woning(prijs=3200, slaapkamers=None, kamers=4)))  # 4 kamers ≈ 3 slaapkamers
+
+    def test_label_extra_huisgenoot(self):
+        w = woning(prijs=3000, slaapkamers=3)
+        self.assertIsNone(self.f.basis(w))
+        self.f.tekst(w)
+        self.assertTrue(any(l.startswith("👥 alleen betaalbaar met 3 personen") for l in w.labels), w.labels)
+        w = woning(prijs=2500, slaapkamers=3)  # past ook met 2: geen label
+        self.f.tekst(w)
+        self.assertFalse(any(l.startswith("👥") for l in w.labels), w.labels)
+
+    def test_prijs_per_persoon(self):
+        self.assertEqual(self.f.per_persoon(woning(prijs=2525), 2), 1000)
+        self.assertEqual(self.f.per_persoon(woning(prijs=3525), 3), 1000)
 
 
 class Basis(unittest.TestCase):
     f = Filter(CFG)
 
-    def test_goede_woning(self):
-        self.assertIsNone(self.f.basis(woning()))
+    def test_kamers_en_m2(self):
+        self.assertIsNotNone(self.f.basis(woning(slaapkamers=1)))
+        self.assertIsNotNone(self.f.basis(woning(prijs=350, slaapkamers=0)))  # parkeerplek bij Homecrew (30 okt)
+        self.assertIsNotNone(self.f.basis(woning(slaapkamers=None, kamers=2)))
+        self.assertIsNone(self.f.basis(woning(slaapkamers=None, kamers=3)))
+        self.assertIsNotNone(self.f.basis(woning(m2=40)))
 
-    def test_prijs_excl_en_incl(self):
-        self.assertIsNotNone(self.f.basis(woning(prijs=2700, prijs_incl=False)))
-        self.assertIsNone(self.f.basis(woning(prijs=2700, prijs_incl=True)))
-        self.assertIsNotNone(self.f.basis(woning(prijs=2700)))  # onbekend = streng
-
-    def test_kamers(self):
-        self.assertIsNotNone(self.f.basis(woning(kamers=2)))
-        self.assertIsNotNone(self.f.basis(woning(slaapkamers=1, kamers=4)))
-        self.assertIsNone(self.f.basis(woning(slaapkamers=3, kamers=None)))
-
-    def test_inschrijving_en_personen(self):
+    def test_inschrijving_personen_short_stay(self):
         self.assertIsNotNone(self.f.basis(woning(inschrijving=False)))
         self.assertIsNotNone(self.f.basis(woning(max_personen=1)))
         self.assertIsNone(self.f.basis(woning(max_personen=2)))
+        start = datetime(2026, 12, 1)
+        self.assertIsNotNone(self.f.basis(woning(beschikbaar=start, einddatum=start + timedelta(days=90))))
+        self.assertIsNone(self.f.basis(woning(beschikbaar=start, einddatum=start + timedelta(days=365))))
+
+    def test_geen_zelfstandige_woning(self):
+        self.assertIsNotNone(self.f.basis(woning(soort="kamer")))
+        self.assertIsNotNone(self.f.basis(woning(soort="studio")))
 
 
 class Tekst(unittest.TestCase):
     f = Filter(CFG)
 
-    def check(self, tekst):
-        w = woning(omschrijving=tekst)
+    def check(self, tekst, **kw):
+        w = woning(omschrijving=tekst, **kw)
         return self.f.tekst(w), w.labels
 
     def test_uitsluiten(self):
@@ -58,11 +94,25 @@ class Tekst(unittest.TestCase):
             "Mooi appartement. Geen studenten.",
             "Not suitable for students or sharers",
             "No students allowed",
+            "Only for working professionals",
+            "Company let only",
+            "Seniorenwoning voor 55+",
+            "Geschikt voor max 1 persoon",
+            "Alleen geschikt voor een stel",
+            "Couples only",
+            "Geen woningdelers",
             "Inschrijving is niet mogelijk op dit adres",
             "Registration not possible",
-            "Geschikt voor max 1 persoon",
-            "Geen woningdelers",
-            "Only for working professionals",
+            "Antikraak woonruimte via leegstandsbeheer",
+            "Kamer met gedeelde keuken en badkamer",
+            "Geen garantstellers",
+            "Guarantors are not accepted",
+            "Eigen inkomen vereist",
+            "Short stay apartment, max 3 months",
+            "Huurperiode: maximaal 4 maanden",
+            # echte gevallen van kamer.nl (30 okt): kamer in gedeelde woning, en geen huurtoeslag
+            "Aantal huisgenoten 0 Huiskamer Gedeeld Toilet Gedeeld Keuken Gedeeld",
+            "Borg € 1.575,00 Huurtoeslag mogelijk Niet mogelijk Voorwaarden",
         ]:
             self.assertIsNotNone(self.check(t)[0], t)
 
@@ -70,28 +120,76 @@ class Tekst(unittest.TestCase):
         for t in [
             "Studenten welkom met garantsteller",
             "Suitable for 2 persons, students allowed",
-            "Geschikt voor 1 of 2 personen",  # bevat '1 of 2', niet '1 persoon'
+            "Geschikt voor 1 of 2 personen",
             "Woningdelers toegestaan",
+            "Suitable for a couple or two sharers",
+            "Geen garantsteller nodig",
+            "Waarborgsom maximaal 2 maanden huur",  # geen short stay
+            "Huurperiode: minimaal 12 maanden",
+            "Wasmachine in bruikleen",
         ]:
             self.assertIsNone(self.check(t)[0], t)
 
+    def test_inkomenseis_drie_gevallen(self):
+        reden, labels = self.check("Inkomenseis: 3x de kale huur bruto per maand, garantsteller mogelijk.")
+        self.assertIsNone(reden)
+        self.assertTrue(any(l.startswith("🤝") and "3× huur" in l for l in labels), labels)
+        self.assertFalse(any(l.startswith("⚠️") for l in labels))
+
+        reden, labels = self.check("Bruto maandinkomen van minimaal 4 x de huur.")
+        self.assertIsNone(reden)
+        self.assertTrue(labels[0].startswith("⚠️ INKOMENSEIS 4× HUUR"), labels)  # groot label bovenaan
+
+        reden, _ = self.check("Inkomen 4x de huur, geen garantstellers.")
+        self.assertIsNotNone(reden)
+
+        # echt geval van kamer.nl: '3,0 x maandhuur' en 'garantiestelling'
+        reden, labels = self.check("Minimaal inkomen 3,0 x maandhuur bruto. Huur voor onbepaalde tijd; een garantiestelling is mogelijk.")
+        self.assertIsNone(reden)
+        self.assertTrue(any(l.startswith("🤝") and "3,0× huur" in l for l in labels), labels)
+
+    def test_onbepaalde_tijd_is_niet_tijdelijk(self):
+        _, labels = self.check("Overeenkomst Onbepaalde tijd Te huur")
+        self.assertFalse(any(l.startswith("⏳") for l in labels), labels)
+        _, labels = self.check("Huurovereenkomst voor bepaalde tijd")
+        self.assertTrue(any(l.startswith("⏳") for l in labels), labels)
+
     def test_labels(self):
-        _, labels = self.check("Studenten welkom, garantsteller vereist. Tijdelijk contract, gemeubileerd. Inkomen 3x de huur.")
-        for verwacht in ("studenten welkom", "garantsteller", "tijdelijk", "gemeubileerd", "inkomenseis"):
-            self.assertTrue(any(verwacht in l for l in labels), (verwacht, labels))
+        _, labels = self.check("Tijdelijk contract, huurperiode 24 maanden. Gemeubileerd. Jongerencontract.")
+        for verwacht in ("⏳ tijdelijk contract (24 maanden)", "🛋 gemeubileerd", "🎓 jongeren-/campuscontract"):
+            self.assertTrue(any(l.startswith(verwacht) for l in labels), (verwacht, labels))
 
     def test_ongemeubileerd_is_niet_gemeubileerd(self):
         for t in ["Ongemeubileerd appartement", "Unfurnished apartment", "Semi-furnished, un-furnished on request"]:
             _, labels = self.check(t)
             self.assertFalse(any("gemeubileerd" in l for l in labels), (t, labels))
 
-    def test_oplichting(self):
+    def test_middenhuur(self):
+        _, labels = self.check("", prijs=1150)
+        self.assertTrue(any(l.startswith("🏷 middenhuur") for l in labels), labels)
+        _, labels = self.check("", prijs=2400)
+        self.assertFalse(any(l.startswith("🏷") for l in labels), labels)
+
+    def test_rode_vlaggen(self):
+        _, labels = self.check("Waarborgsom: 3 maanden huur. Bemiddelingskosten € 500.", prijs=2000)
+        self.assertTrue(any("waarborgsom 3.0×" in l for l in labels), labels)
+        self.assertTrue(any("bemiddelingskosten" in l for l in labels), labels)
+        _, labels = self.check("Waarborgsom 2 maanden. Geen bemiddelingskosten. No agency fee.", prijs=2000)
+        self.assertFalse(any(l.startswith("🚩") for l in labels), labels)
         _, labels = self.check("I live abroad, I will send the keys by mail after payment via Western Union")
-        self.assertTrue(any("oplichting" in l for l in labels))
+        self.assertTrue(any("oplichting" in l for l in labels), labels)
+        _, labels = self.check("Onderhuur voor een jaar")
+        self.assertTrue(any("onderhuur" in l for l in labels), labels)
+
+    def test_later_beschikbaar(self):
+        _, labels = self.check("", beschikbaar=datetime.now() + timedelta(days=120))
+        self.assertTrue(any(l.startswith("📅") for l in labels), labels)
+        _, labels = self.check("", beschikbaar=datetime.now() + timedelta(days=20))
+        self.assertFalse(any(l.startswith("📅") for l in labels), labels)
 
 
 class Wijken(unittest.TestCase):
-    """Echte adressen binnen en buiten je zoekgebied."""
+    """Echte adressen binnen en buiten het zoekgebied."""
 
     @classmethod
     def setUpClass(cls):
@@ -125,12 +223,28 @@ class Wijken(unittest.TestCase):
 
     def test_buiten(self):
         for kw in [
-            dict(straat="Vrolikstraat", huisnummer="64"),  # Oost, maar voorbij de Wibautstraat
+            dict(straat="Vrolikstraat", huisnummer="64"),  # Oost, voorbij de Wibautstraat
             dict(straat="Nageljongenstraat", huisnummer="42", postcode="1033PE"),  # Noord
             dict(straat="Sumatrakade", huisnummer="100"),  # Oostelijk Havengebied
+            dict(straat="Kattenburgerstraat", huisnummer="5"),  # Oostelijke Eilanden: bewust niet
         ]:
             reden, wijken = self.wijk(**kw)
             self.assertIsNotNone(reden, (kw, wijken))
+
+
+class Elders(unittest.TestCase):
+    """Dezelfde woning op twee sites: afwijzing op de ene site geldt ook voor de andere."""
+
+    def test_koppeling(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            opslag = Opslag(Path(tmp) / "t.db")
+            makelaar = woning(bron="Hausing", id="a", straat="Weesperzijde", huisnummer="112-2", prijs=2300)
+            opslag.markeer(makelaar, False, "tekst: 'geen studenten'")
+            alert = woning(bron="Pararius", id="b", straat="Weesperzijde", huisnummer="112", prijs=2350)
+            self.assertEqual(opslag.elders(alert, 14), ("Hausing", False, "tekst: 'geen studenten'"))
+            anders = woning(bron="Funda", id="c", straat="Weesperzijde", huisnummer="40", prijs=2350)
+            self.assertIsNone(opslag.elders(anders, 14))
+            opslag.db.close()
 
 
 if __name__ == "__main__":

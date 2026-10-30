@@ -29,6 +29,8 @@ from .web import Geweigerd, Web
 
 MAP = Path(__file__).resolve().parent.parent
 FOUTEN_VOOR_WAARSCHUWING = 6  # zoveel mislukte scans op rij van één site = melding sturen
+# afwijzingen die over de woning zelf gaan en dus ook gelden als dezelfde woning op een andere site staat
+VOORWAARDEN = ("tekst:", "inschrijven", "max ", "short stay")
 
 log = logging.getLogger("woningzoeker")
 
@@ -76,7 +78,7 @@ class Zoeker:
                     log.info("  ✗ %-28s €%-5s %s", (w.adres or w.straat)[:28], w.prijs, reden)
                     if not droog:
                         self.opslag.markeer(w, False, reden)
-                elif any(m.dubbel_sleutel == w.dubbel_sleutel for m in matches):
+                elif any(m.dubbel_sleutel == w.dubbel_sleutel or (w.adres_sleutel and m.adres_sleutel == w.adres_sleutel) for m in matches):
                     log.info("  = %-28s staat ook op een andere site", (w.adres or w.straat)[:28])
                     if not droog:
                         self.opslag.markeer(w, False, "dubbel in deze scan")
@@ -84,7 +86,7 @@ class Zoeker:
                     log.info("  ✓ %-28s €%-5s %s", (w.adres or w.straat)[:28], w.prijs, w.wijk)
                     matches.append(w)
 
-        matches.sort(key=lambda w: w.prijs or 0)
+        matches.sort(key=lambda w: filt.per_persoon(w, filt.nodig_bewoners(w) or 2))  # goedkoopste p.p. eerst
         limiet = s.get("max_meldingen_per_scan", 15)
         for w in matches[:limiet]:
             if droog:
@@ -143,7 +145,7 @@ class Zoeker:
 
     def _beoordeel(self, w: Woning, bron: Bron, filt: Filter, eerste: bool) -> str | None:
         s = self.cfg["scan"]
-        if reden := filt.basis(w):
+        if reden := filt.basis(w, voorlopig=True):
             return reden
         # eerst met de gegevens uit de lijst kijken of de wijk al afvalt; scheelt pagina's ophalen
         wijken, buurt = self.locatie.bepaal(w)
@@ -156,14 +158,18 @@ class Zoeker:
         if reden := filt.basis(w):
             return reden
         wijken, buurt = self.locatie.bepaal(w)
-        labels = [x for x in w.labels if x.startswith("✉️")]
-        w.labels = labels
+        w.labels = [x for x in w.labels if x.startswith("❔")]  # label van de bron zelf (e-mailalert) bewaren
         if reden := filt.wijk(w, wijken, buurt, definitief=True):
             return reden
+        # dezelfde woning al op een andere site gezien? Dan geldt wat daar in de advertentie stond.
+        if elders := self.opslag.elders(w, s.get("dubbel_dagen", 14)):
+            andere_bron, gemeld, reden_elders = elders
+            if gemeld:
+                return f"al gemeld via {andere_bron}"
+            if reden_elders.startswith(VOORWAARDEN):
+                return f"{reden_elders} (volgens {andere_bron})"
         if reden := filt.tekst(w):
             return reden
-        if self.opslag.al_gemeld_elders(w, s.get("dubbel_dagen", 14)):
-            return "al gemeld via een andere site"
         if eerste and w.geplaatst and w.geplaatst < datetime.now() - timedelta(hours=s["eerste_scan_max_uren"]):
             return "eerste scan: te oud"
         return None

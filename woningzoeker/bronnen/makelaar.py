@@ -11,6 +11,12 @@ from ..web import Web, jsonld, zoek_type
 from . import Bron
 
 WEG = ["script", "style", "noscript", "form", "select", "nav", "header", "footer", "svg", "iframe", "button"]
+# blokken die niet over deze woning gaan: andere woningen en algemene vragen (FAQ) van de site
+ANDERE_WONINGEN = re.compile(
+    r"related|similar|vergelijkba|aanbevol|suggest|recent-|more-properties|other-properties|andere-woningen"
+    r"|faq|veelgestelde|frequently|easy-accordion",
+    re.I,
+)
 
 
 class Makelaar(Bron):
@@ -41,7 +47,7 @@ class Makelaar(Bron):
             if t.is_verhuurd(tekst) or (self.alleen and not self.alleen.search(f"{tekst} {unquote(url)}")):
                 continue
             w = Woning(bron=self.naam, id=urlparse(url).path.rstrip("/"), url=url, plaats=self.plaats)
-            straat, nr, pc = _adres_uit_url(url)
+            straat, nr, pc = adres_uit_url(url)
             w.postcode = pc
             t.vul_aan(w, tekst)
             titel = kaart.find(["h1", "h2", "h3", "h4", "strong"])
@@ -79,6 +85,13 @@ def details(web: Web, w: Woning) -> None:
         w.foto = og.get("content", "")
     for el in soup(WEG):
         el.decompose()
+    # blokken met andere woningen ('vergelijkbaar aanbod') weghalen, anders lezen we hún voorwaarden
+    for el in soup.find_all(lambda tag: tag.has_attr("class") or tag.has_attr("id")):
+        if el.decomposed:  # zat in een blok dat al weg is
+            continue
+        naam = " ".join(el.get("class") or []) + " " + (el.get("id") or "")
+        if ANDERE_WONINGEN.search(naam):
+            el.decompose()
     hoofd = soup.find("main") or soup.body
     tekst = hoofd.get_text(" ", strip=True) if hoofd else ""
     if len(tekst) < 300:  # sommige sites hebben een lege <main> of zelfs twee <body>-tags
@@ -117,7 +130,7 @@ _GEEN_STRAAT = {"amsterdam", "woning", "huurwoning", "huurwoningen", "woningen",
                 "residential", "nl", "en", "page"}
 
 
-def _adres_uit_url(url: str) -> tuple[str, str, str]:
+def adres_uit_url(url: str) -> tuple[str, str, str]:
     """Straat, huisnummer en postcode uit een link.
 
     '/huurwoning/Wijnsilostraat-12-Amsterdam/2561/'            -> ('Wijnsilostraat', '12', '')

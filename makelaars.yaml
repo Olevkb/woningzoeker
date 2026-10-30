@@ -60,19 +60,89 @@ makelaars:
   - naam: Rotsvast
     url: https://www.rotsvast.nl/wonen/
     link: ^/wonen/object/
-    alleen: Amsterdam
+    alleen: -amsterdam(-\d+)?/?$
 
   - naam: Ikwilhuren
     url: https://ikwilhuren.nu/aanbod/
     link: ^/object/
-    alleen: Amsterdam
+    alleen: /object/amsterdam-
 
   - naam: Househunting
     url: https://househunting.nl/woningaanbod/
     link: ^/woningaanbod/[0-9a-f-]{36}-
-    alleen: amsterdam
+    alleen: -amsterdam/?$
 
   - naam: Eefje Voogd
     url: https://www.eefjevoogd.nl/woningen/
     link: ^/woningen/(?!page/)[^/]+/?$
     alleen: huur
+
+  # --- toegevoegd 30 oktober 2026 (zie docs/bronnen.md) ---
+  - naam: JLG Real Estate
+    url: https://jlgrealestate.com/woningen/huur/
+    link: ^/woningen/huur/amsterdam/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Van Huis Uit Makelaars
+    url: https://vanhuisuit-makelaars.nl/aanbod/
+    link: ^/aanbod/(?!aanbod-)[^/]+/?$
+    alleen: huur
+
+  - naam: SEM Makelaars
+    url: https://www.semmakelaars.nl/woningaanbod/
+    link: ^/woningen/[^/]+/?$
+    alleen: huur
+
+  - naam: Incity Real Estate
+    url: https://incityrealestate.nl/nl/aanbod
+    link: ^/nl/aanbod/[^/]+$
+    alleen: huur
+
+  - naam: HousingNet
+    url: https://www.housingnet.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Homecrew
+    url: https://www.homecrew.nl/aanbod
+    link: ^/aanbod/[^/]+$
+    alleen: _amsterdam(-[a-z0-9]+)?$
+
+
+
+  - naam: Interhouse
+    url: https://interhouse.nl/
+    link: ^/vastgoed/huur/amsterdam/
+    plaats: Amsterdam
+
+  - naam: Damstad
+    url: https://www.damstad.nl/
+    link: ^/nl/woningaanbod/woning/amsterdam/
+    plaats: Amsterdam
+    alleen: huur|per maand|p\.m\.|/mnd|/maand
+
+  - naam: 27 House Real Estate
+    url: https://www.27huis.nl/
+    link: ^/nl/aanbod/woning/amsterdam/
+    plaats: Amsterdam
+    alleen: huur|per maand|p\.m\.|/mnd|/maand
+
+  - naam: Gapph
+    url: https://www.gapph.nl/woonruimte/tijdelijk-huren
+    link: ^/woonruimte/woonruimte/tijdelijk-huren/amsterdam/\d+
+    plaats: Amsterdam
+
+  - naam: Woonnet
+    url: https://www.woonnet.nl/huurwoningen/amsterdam
+    link: ^/huurwoning/amsterdam/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Huurzone
+    url: https://www.huurzone.nl/huurwoningen/amsterdam
+    link: ^/huurwoningen/noord-holland/amsterdam/\d+
+    plaats: Amsterdam
+
+  - naam: Kamer.nl
+    url: https://www.kamer.nl/huren/appartement-amsterdam/
+    link: ^/huren/appartement-amsterdam/(?!wijk-)[^/]+/[^/]+
+    plaats: Amsterdam

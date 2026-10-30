@@ -26,7 +26,8 @@ class Kamernet(Bron):
                     straat=x.get("street") or "",
                     plaats=x.get("city") or "",
                     prijs=x.get("totalRentalPrice"),
-                    prijs_incl=x.get("utilitiesIncluded"),
+                    # Kamernet toont de totale huur; met of zonder gas/water/licht
+                    prijs_soort="alles" if x.get("utilitiesIncluded") else "service",
                     m2=x.get("surfaceArea"),
                     soort="appartement",
                     foto=x.get("fullPreviewImageUrl") or "",
@@ -45,5 +46,7 @@ class Kamernet(Bron):
         w.inschrijving = d.get("isRegistrationAllowed")
         w.max_personen = d.get("suitableForNumberOfPersons") or None
         w.geplaatst = tijdstip(d.get("publishDate")) or w.geplaatst
+        w.beschikbaar = tijdstip(d.get("availabilityStartDate")) or w.beschikbaar
+        w.einddatum = tijdstip(d.get("availabilityEndDate")) or w.einddatum
         delen = (d.get("dutchTitle"), d.get("dutchDescription"), d.get("englishTitle"), d.get("englishDescription"))
         w.omschrijving = "\n".join(x for x in delen if x)

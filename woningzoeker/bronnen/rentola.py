@@ -2,6 +2,7 @@ import re
 
 from bs4 import BeautifulSoup
 
+from .. import tekst as t
 from ..model import Woning, getal, postcode_schoon
 from ..web import Web, jsonld, zoek_type
 from . import Bron, tijdstip
@@ -63,3 +64,4 @@ class Rentola(Bron):
         m = re.search(r"slaapkamers\s+(\d+)", tekst, re.I)
         if m:
             w.slaapkamers = int(m.group(1))
+        t.vul_aan(w, w.omschrijving, ook_prijs=False)

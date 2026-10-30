@@ -20,6 +20,7 @@ from .. import tekst as t
 from ..model import Woning
 from ..web import USER_AGENT, Web
 from . import Bron, tijdstip
+from .makelaar import adres_uit_url
 
 log = logging.getLogger(__name__)
 
@@ -96,13 +97,18 @@ class Gmail(Bron):
             pad = urlparse(echt).path.rstrip("/")
             w = Woning(bron=naam, id=pad or hashlib.sha1(tekst.encode()).hexdigest()[:12], url=echt, geplaatst=ontvangen, foto=foto)
             t.vul_aan(w, tekst)
-            w.hints = [tekst[:200]]
+            w.omschrijving = tekst  # alles wat de alert over de woning zegt gaat door de tekstfilters
+            straat, nr, pc = adres_uit_url(echt)
             w.straat, w.huisnummer = t.adres(tekst)
+            if not w.straat and straat:
+                w.straat, w.huisnummer = straat, nr
+            w.postcode = w.postcode or pc
+            w.hints = [x for x in (f"{straat} {nr}".strip(), tekst[:200]) if x]
             if re.search(r"\bAmsterdam\b", tekst + echt, re.I):
                 w.plaats = "Amsterdam"
-            if re.search(r"/(kamer|room)[^/]*-te-huur/", echt):
+            if re.search(r"/(kamer|room)[^/]*-te-huur/|/kamer-|/room-", echt):
                 w.soort = "kamer"
-            w.labels.append("✉️ via e-mailalert: check de voorwaarden in de advertentie zelf")
+            w.labels.append(f"❔ via {naam}-alert: voorwaarden (studenten, garantsteller, inschrijving) niet gecontroleerd")
             uit.append(w)
         return uit
 

@@ -1,6 +1,7 @@
-"""Haalt prijs, m², kamers en postcode uit vrije tekst (makelaarssites, e-mailalerts)."""
+"""Haalt prijs, m², kamers, postcode, beschikbaarheid en borg uit vrije tekst (makelaarssites, e-mailalerts)."""
 
 import re
+from datetime import datetime
 
 from .model import Woning
 
@@ -8,6 +9,22 @@ _BEDRAG = r"(?:€|EUR|eur)\s?(\d{1,2}(?:[.,]\d{3})+|\d{3,5})(?:[.,](?:\d{2}|-{1
 _PER_MAAND = r"(?:per\s+maand|per\s+month|p\.?\s?m\.?\b|p/m|p/mnd|/\s?mnd|/\s?maand|/\s?month|mnd\b|maand|month)"
 _POSTCODE = re.compile(r"(?<![\d.,€])(?<!€\s)(?<!EUR\s)\b([1-9]\d{3}) ?([A-Z]{2})\b")
 _VERHUURD = re.compile(r"\b(verhuurd|rented(?: out)?|onder optie|under option|gereserveerd|reserved|let agreed)\b", re.I)
+
+_INCL = r"incl(?:\.|usief|uding)?\s*"
+_SOORT_PATRONEN = [
+    ("service", _INCL + r"(?:de\s+)?(?:servicekosten|service ?costs|service charges|service fee)"),
+    ("alles", r"all[- ]?in\b|utilities included|" + _INCL + r"(?:alle kosten|g/?w/?[el]\b|gwl|gwe|gas|energie|nutsvoorzieningen|(?:all )?utilities|everything)"),
+    ("kaal", r"\bexcl(?:\.|usief|uding)?\b|kale huur|basic rent|bare rent"),
+    ("service", r"\bincl(?:\.|usief|uding)?\b"),
+]
+
+_MAANDEN = {
+    "januari": 1, "january": 1, "jan": 1, "februari": 2, "february": 2, "feb": 2, "maart": 3, "march": 3, "mrt": 3,
+    "mar": 3, "april": 4, "apr": 4, "mei": 5, "may": 5, "juni": 6, "june": 6, "jun": 6, "juli": 7, "july": 7,
+    "jul": 7, "augustus": 8, "august": 8, "aug": 8, "september": 9, "sept": 9, "sep": 9, "oktober": 10,
+    "october": 10, "okt": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
+}
+_MAAND = "(" + "|".join(sorted(_MAANDEN, key=len, reverse=True)) + r")\.?"
 
 
 def bedrag(tekst: str) -> int:
@@ -28,11 +45,17 @@ def prijs(tekst: str) -> int | None:
     return None
 
 
-def incl_excl(tekst: str) -> bool | None:
-    m = re.search(_BEDRAG + r".{0,40}?\b(incl|inclusief|including|excl|exclusief|excluding)", tekst, re.I | re.S)
-    if not m:
-        return None
-    return m.group(2).lower().startswith("incl")
+def prijs_soort(tekst: str, huurprijs: int | None = None) -> str | None:
+    """Wat er in de prijs zit, gelezen direct achter het bedrag: 'kaal', 'service', 'alles' of None."""
+    venster = ""
+    for m in re.finditer(_BEDRAG, tekst):
+        if huurprijs is None or bedrag(m.group(1)) == huurprijs:
+            venster = tekst[m.start(): m.end() + 80]
+            break
+    for soort, patroon in _SOORT_PATRONEN:
+        if venster and re.search(patroon, venster, re.I):
+            return soort
+    return None
 
 
 def _eerste(patronen, tekst, laag, hoog) -> int | None:
@@ -56,8 +79,9 @@ def m2(tekst: str) -> int | None:
 
 
 def slaapkamers(tekst: str) -> int | None:
+    # 0 telt mee: 'Slaapkamers 0' is een studio, parkeerplek of berging
     return _eerste(
-        [_GETAL + r"\s*(?:slaapkamers?|bedrooms?|slpk)\b", r"\b(?:slaapkamers?|bedrooms?)\s*:?\s*(\d{1,2})\b"], tekst, 1, 12
+        [_GETAL + r"\s*(?:slaapkamers?|bedrooms?|slpk)\b", r"\b(?:slaapkamers?|bedrooms?)\s*:?\s*(\d{1,2})\b"], tekst, 0, 12
     )
 
 
@@ -77,20 +101,66 @@ def is_verhuurd(tekst: str) -> bool:
     return bool(_VERHUURD.search(tekst))
 
 
+def datum(tekst: str) -> datetime | None:
+    """Eerste datum in de tekst: 1-12-2026, 2026-12-01, 1 december 2026, December 1, 2026 of december 2026."""
+    patronen = [
+        (r"\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b", lambda m: (int(m[3]), int(m[2]), int(m[1]))),
+        (r"\b(\d{4})-(\d{2})-(\d{2})\b", lambda m: (int(m[1]), int(m[2]), int(m[3]))),
+        (r"\b(\d{1,2})(?:st|nd|rd|th|e)?\s+" + _MAAND + r"\s+(\d{4})\b", lambda m: (int(m[3]), _MAANDEN[m[2].lower()], int(m[1]))),
+        (r"\b" + _MAAND + r"\s+(\d{1,2}),?\s+(\d{4})\b", lambda m: (int(m[3]), _MAANDEN[m[1].lower()], int(m[2]))),
+        (r"\b" + _MAAND + r"\s+(\d{4})\b", lambda m: (int(m[2]), _MAANDEN[m[1].lower()], 1)),
+    ]
+    gevonden = []
+    for patroon, delen in patronen:
+        for m in re.finditer(patroon, tekst, re.I):
+            try:
+                gevonden.append((m.start(), datetime(*delen(m))))
+            except ValueError:
+                continue
+    return min(gevonden)[1] if gevonden else None
+
+
+def beschikbaar(tekst: str) -> datetime | None:
+    """Ingangsdatum, gelezen na 'beschikbaar', 'available', 'ingangsdatum' e.d."""
+    for m in re.finditer(r"\b(beschikbaar(?:heid)?|available|availability|ingangsdatum|aanvaarding|start date|move[- ]in)\b", tekst, re.I):
+        stuk = tekst[m.end(): m.end() + 45]
+        if re.match(r"\W{0,5}(per direct|direct|immediately|now|nu)\b", stuk, re.I):
+            return datetime.now()
+        if d := datum(stuk):
+            return d
+    return None
+
+
+def borg_maanden(tekst: str, huurprijs: int | None) -> float | None:
+    """Waarborgsom uitgedrukt in maanden kale huur."""
+    for m in re.finditer(r"\b(waarborgsom|borg(?:som)?|security deposit|deposit)\b", tekst, re.I):
+        stuk = tekst[m.end(): m.end() + 45]
+        if mm := re.match(r"\D{0,25}?(\d(?:[.,]\d)?)\s*(?:x\s*)?(?:maanden|maand|months?|maal|keer)\b", stuk, re.I):
+            return float(mm.group(1).replace(",", "."))
+        if huurprijs and (mm := re.match(r"\D{0,25}?" + _BEDRAG, stuk)):
+            return bedrag(mm.group(1)) / huurprijs
+    return None
+
+
+_VOORVOEGSELS = r"^(?:(?:te huur|for rent|nieuw|new|appartement|apartment|huis|house|woning|studio|bovenwoning|benedenwoning|penthouse|maisonnette|eengezinswoning)\b\s*[:|\-–]?\s*)+"
+
+
 def adres(tekst: str) -> tuple[str, str]:
-    """'Albert Cuypstraat 12-2' -> ('Albert Cuypstraat', '12-2'). Leeg als er geen straat met nummer in staat."""
-    m = re.search(r"([A-Z][\w.'’\- ]{2,40}?)\s+(\d{1,4}(?:\s?[-/]?\s?[A-Za-z0-9]{1,4})?)\b", tekst)
+    """'Appartement Albert Cuypstraat 12-2' -> ('Albert Cuypstraat', '12-2'). Leeg als er geen straat met nummer in staat."""
+    # huisnummer met toevoeging: 12, 35F, 12-2, 12/H, 12 H, 12 hs (maar niet '112 1091' = nummer + postcode)
+    m = re.search(r"([A-Z][\w.'’\- ]{2,40}?)\s+(\d{1,4}(?:[A-Za-z]{1,2}\b|\s?[-/]\s?[A-Za-z0-9]{1,4}|\s[A-Za-z]{1,3}\b)?)(?!\d)", tekst)
     if not m or re.search(r"€|\d", m.group(1)):
         return "", ""
-    return m.group(1).strip(), m.group(2).replace(" ", "")
+    straat = re.sub(_VOORVOEGSELS, "", m.group(1).strip(), flags=re.I).strip()
+    return (straat, m.group(2).replace(" ", "")) if len(straat) >= 3 else ("", "")
 
 
 def vul_aan(w: Woning, tekst: str, ook_prijs: bool = True):
     """Vult alleen velden die nog leeg zijn."""
     if ook_prijs and w.prijs is None:
         w.prijs = prijs(tekst)
-    if w.prijs_incl is None:
-        w.prijs_incl = incl_excl(tekst)
+    if w.prijs_soort is None:
+        w.prijs_soort = prijs_soort(tekst, w.prijs)
     if w.m2 is None:
         w.m2 = m2(tekst)
     if w.slaapkamers is None:
@@ -99,3 +169,5 @@ def vul_aan(w: Woning, tekst: str, ook_prijs: bool = True):
         w.kamers = kamers(tekst)
     if not w.postcode:
         w.postcode = postcode(tekst)
+    if w.beschikbaar is None:
+        w.beschikbaar = beschikbaar(tekst)
