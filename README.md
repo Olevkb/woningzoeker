@@ -40,6 +40,16 @@ Je bot-token en app-wachtwoord komen in `.env` (staat niet op GitHub) en als ver
 
 Daarna start de scan vanzelf elke 5 minuten. Je krijgt elke dag een "nog actief"-bericht, en als een site langere tijd niet werkt krijg je een waarschuwing.
 
+## Meldingen in een groep
+
+Maak in Telegram een groep met je huisgenoot, voeg de bot toe en stuur in de groep `/start@<naam van je bot>`. Draai daarna:
+
+```powershell
+python setup_telegram.py --groep
+```
+
+Dat legt de groep vast in `.env` en geeft hem door aan GitHub. De volgende scan stuurt de meldingen naar de groep.
+
 ## Elke 5 minuten scannen: de externe wekker
 
 GitHubs eigen planner startte bij deze repository geen scans. Daarom geeft cron-job.org (gratis) elke 5 minuten een seintje:

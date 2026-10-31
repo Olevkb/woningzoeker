@@ -1,12 +1,15 @@
 """Meldingen naar je telefoon via een eigen Telegram-bot."""
 
 import html
+import logging
 from datetime import datetime
 from urllib.parse import quote_plus
 
 import requests
 
 from .model import Woning
+
+log = logging.getLogger(__name__)
 
 
 class Telegram:
@@ -17,6 +20,12 @@ class Telegram:
     def _stuur(self, methode: str, **data) -> dict:
         r = requests.post(f"{self.url}/{methode}", json={"chat_id": self.chat_id, **data}, timeout=30)
         antwoord = r.json()
+        nieuw = (antwoord.get("parameters") or {}).get("migrate_to_chat_id")
+        if not antwoord.get("ok") and nieuw:
+            # Telegram heeft de groep omgezet naar een supergroep, met een nieuw ID: daar naartoe sturen
+            log.warning("Telegram-groep heeft een nieuw ID (%s). Leg het vast met: python setup_telegram.py --groep", nieuw)
+            self.chat_id = nieuw
+            return self._stuur(methode, **data)
         if not antwoord.get("ok"):
             raise RuntimeError(f"Telegram {methode}: {antwoord.get('description')}")
         return antwoord
