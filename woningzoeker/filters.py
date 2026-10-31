@@ -42,6 +42,7 @@ class Filter:
         self.min_m2 = z.get("min_m2", 0)
         self.gemeubileerd = z.get("gemeubileerd", "label")
         self.wijken = {x.lower() for x in z.get("wijken") or []}
+        self.buurten_uit = {x.lower() for x in z.get("buurten_uitsluiten") or []}
         self.toeslag = (cfg.get("huurtoeslag") or {}).get("per_maand", 0)
         tk = cfg.get("tekst") or {}
         self.uitsluiten = _patronen(tk.get("uitsluiten"))
@@ -114,10 +115,17 @@ class Filter:
         goed = [x for x in wijken if x.lower() in self.wijken]
         if not goed:
             return f"wijk {', '.join(wijken[:3])}"
-        w.wijk = goed[0]
-        w.buurt = buurt
+        # binnen de goede wijken: welke buurten zijn mogelijk, en welke daarvan zijn uitgesloten
+        paren = [p for p in w.buurten if p[0].lower() in self.wijken] or ([(goed[0], buurt)] if buurt else [])
+        toegestaan = [p for p in paren if p[1].lower() not in self.buurten_uit]
+        if paren and not toegestaan:
+            return f"buurt {paren[0][1]}"
+        w.wijk, w.buurt = toegestaan[0] if toegestaan else (goed[0], buurt)
         if len(wijken) > 1:
             w.labels.append("📍 straat loopt door meerdere wijken, check het adres")
+        elif len(toegestaan) < len(paren):
+            uit = ", ".join(sorted({p[1] for p in paren} - {p[1] for p in toegestaan}))
+            w.labels.append(f"📍 straat loopt deels door {uit}, check het adres")
         return None
 
     # --- tekst van de advertentie ---

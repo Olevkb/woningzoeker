@@ -36,6 +36,7 @@ class Woning:
     # ingevuld tijdens het filteren
     wijk: str = ""
     buurt: str = ""
+    buurten: list[tuple[str, str]] = field(default_factory=list)  # mogelijke (wijk, buurt) volgens PDOK
     labels: list[str] = field(default_factory=list)
 
     @property

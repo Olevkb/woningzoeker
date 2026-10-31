@@ -64,6 +64,7 @@ De alert bevat meestal alleen adres, prijs, m² en kamers. Eisen 1–4 controlee
 | De Pijp | Oude Pijp, Nieuwe Pijp, Zuid Pijp |
 | Zuid | Museumkwartier, Willemspark, Schinkelbuurt, Hoofddorppleinbuurt, Stadionbuurt, Apollobuurt, Scheldebuurt, IJselbuurt, Rijnbuurt, Prinses Irenebuurt e.o., Zuidas |
 | Oost | alleen Weesperzijde (Amstel tot Wibautstraat) |
+| Niet (buurten binnen bovenstaande wijken, besloten 31 okt) | Westerdokseiland, Westelijke eilanden (Prinseneiland, Bickerseiland, Realeneiland), Planciusbuurt, Oosterdokseiland |
 | Niet | o.a. Oostelijke Eilanden/Kadijken, Buitenveldert, Oud-West, Oosterparkbuurt, Spaarndammerbuurt, Noord, Nieuw-West, Zuidoost |
 
 ## 7. Besloten
@@ -71,6 +72,9 @@ De alert bevat meestal alleen adres, prijs, m² en kamers. Eisen 1–4 controlee
 - Oostelijke Eilanden/Kadijken: niet
 - Marktplaats: niet
 - Inkomenseis zonder vermelding van garantsteller: wel melden, met groot label (zie 3)
+- Gemeubileerd: uitsluiten, tenzij ook ongemeubileerd aangeboden (31 okt)
+- Aantal slaapkamers onbekend na het lezen van de advertentie: niet melden (31 okt)
+- Mijn DAK (corporaties): niet, i.v.m. inschrijfduur/punten en middenhuur (31 okt)
 
 
 Bronnen: [Rijksoverheid huurtoeslag 2026](https://www.rijksoverheid.nl/actueel/nieuws/2025/11/24/meer-mensen-in-aanmerking-huurtoeslag), [Belastingdienst](https://www.belastingdienst.nl/wps/wcm/connect/nl/huurtoeslag/content/huurtoeslag-verandert-vanaf-2026), [Huisvestingsverordening Amsterdam](https://lokaleregelgeving.overheid.nl/CVDR706038/), [Ymere over middenhuur](https://www.ymere.nl/ik-zoek/middenhuur-en-vrije-sector/toewijzingseisen-middenhuur-en-vrije-sector/).

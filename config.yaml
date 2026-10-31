@@ -55,6 +55,14 @@ zoeken:
     # --- Oost: strook tussen Amstel en Wibautstraat ---
     - Weesperzijde
 
+  # Buurten binnen die wijken die er tóch niet bij horen (officiële buurtnamen, ook uit PDOK).
+  buurten_uitsluiten:
+    - Westerdokseiland        # Haarlemmerbuurt, overkant van het spoor
+    - Westelijke eilanden     # Prinseneiland, Bickerseiland, Realeneiland
+    - Planciusbuurt-Noord
+    - Planciusbuurt-Zuid
+    - Oosterdokseiland        # achter Centraal Station
+
 huurtoeslag:
   per_maand: 525  # voor de hele woning; de melding deelt dit door het aantal bewoners
 

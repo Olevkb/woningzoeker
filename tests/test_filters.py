@@ -254,6 +254,10 @@ class Wijken(unittest.TestCase):
             dict(straat="Nageljongenstraat", huisnummer="42", postcode="1033PE"),  # Noord
             dict(straat="Sumatrakade", huisnummer="100"),  # Oostelijk Havengebied
             dict(straat="Kattenburgerstraat", huisnummer="5"),  # Oostelijke Eilanden: bewust niet
+            # wel de goede wijk (Haarlemmerbuurt, Nieuwmarkt/Lastage), maar een uitgesloten buurt
+            dict(straat="Westerdoksdijk", huisnummer="259", postcode="1013AD"),  # Westerdokseiland (31 okt)
+            dict(straat="Prinseneiland", huisnummer="20"),  # Westelijke eilanden
+            dict(straat="Oosterdokskade", huisnummer="5"),  # Oosterdokseiland
         ]:
             reden, wijken = self.wijk(**kw)
             self.assertIsNotNone(reden, (kw, wijken))

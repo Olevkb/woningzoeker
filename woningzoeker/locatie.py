@@ -56,6 +56,8 @@ class Locatie:
                 w.huisnummer = uitkomst["huisnummer"] if nr and re.search(direct_na_straat, controle, re.I) else ""
             if w.huisnummer and not w.postcode:  # alleen bij een exact adres, anders gaat de straat-info verloren
                 w.postcode = uitkomst.get("postcode", "")
+            # alle (wijk, buurt)-combinaties, voor het uitsluiten van buurten (oudere cache heeft alleen 'buurt')
+            w.buurten = [tuple(p) for p in uitkomst.get("paren", [])]
             return uitkomst["wijken"], uitkomst.get("buurt", "")
         return [], ""
 
@@ -82,14 +84,17 @@ class Locatie:
 
     @staticmethod
     def _uitkomst(docs) -> dict:
-        wijken = []
+        wijken, paren = [], []
         for d in docs:
             if d.get("wijknaam") and d["wijknaam"] not in wijken:
                 wijken.append(d["wijknaam"])
+            paar = [d.get("wijknaam") or "", d.get("buurtnaam") or ""]
+            if paar[0] and paar not in paren:
+                paren.append(paar)
         if not wijken:
             return {"wijken": []}
         eerste = docs[0]
-        uitkomst = {"wijken": wijken, "buurt": eerste.get("buurtnaam", "") if len(wijken) == 1 else ""}
+        uitkomst = {"wijken": wijken, "buurt": eerste.get("buurtnaam", "") if len(wijken) == 1 else "", "paren": paren}
         if len(docs) == 1:
             uitkomst |= {"straat": eerste.get("straatnaam", ""), "huisnummer": eerste.get("huis_nlt", ""), "postcode": eerste.get("postcode", "")}
         return uitkomst
