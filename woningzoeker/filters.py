@@ -82,6 +82,8 @@ class Filter:
             return f"ligt in {w.plaats}"
         if w.soort in GEEN_WONING:
             return f"is een {w.soort}"
+        if w.status:
+            return w.status
         if w.prijs is None:
             return None if voorlopig else "geen prijs"
         if self.nodig_bewoners(w) is None:

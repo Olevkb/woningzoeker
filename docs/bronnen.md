@@ -31,15 +31,15 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 | Marktplaats (huizen te huur) | particulieren; veel oplichting | ➖ besloten: niet |
 | Directwonen | particulieren | ⛔ (heeft wel e-mailalerts → mogelijk ✉️) |
 | Snelwonen | verzamelsite | ⛔ |
-| HousingAnywhere, Spotahome, Nestpick | gemeubileerd, vooral kamers en kortere huur | 🔧 |
+| HousingAnywhere, Spotahome, Nestpick | gemeubileerd, vooral kamers en kortere huur | ➖ valt af op jullie eisen (gemeubileerd, kort) |
 | Huurda | verzamelsite | 🔧 |
-| Holland2Stay | gemeubileerd, korte tot middellange huur | 🔧 |
+| Holland2Stay | gemeubileerd, korte tot middellange huur | ➖ valt af op jullie eisen (gemeubileerd) |
 
 ## 2. Corporaties en studentenhuisvesting
 
 | Bron | Wat staat er | Status |
 |---|---|---|
-| Mijn DAK (Stadgenoot, Rochdale, Ymere, De Key, Eigen Haard) | middenhuur (€932,93–€1.228,07, vergunning nodig) en vrije sector van corporaties | 🔧 inschrijving nodig (€50), aanbod nog uitzoeken |
+| Mijn DAK (Stadgenoot, Rochdale, Ymere, De Key, Eigen Haard) | publiek aanbod (31 okt): 133 woningen, waarvan 7 vrije sector, 10 middenhuur, 2 loting; de rest sociale huur (jaren inschrijfduur) | ❓ besluit nodig: inschrijving vereist om te reageren, en het aanbod komt via een interne app-koppeling die lastig na te bouwen is |
 | Room.nl / DUWO | studentenwoningen, vooral 1 persoon | 🔧 apart bespreken |
 | De Alliantie | eigen projecten | 🔧 |
 
@@ -48,9 +48,9 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 | Bron | Status |
 |---|---|
 | Heimstaden | ✅ (weinig aanbod, verkoopt veel woningen) |
-| Vesteda | 🔧 |
-| MVGM | 🔧 |
-| Woonzeker | 🔧 |
+| Vesteda | ✅ via de zoek-API van de site; alleen woningen die Vesteda geschikt vindt voor woningdelers komen door |
+| MVGM | ➖ verhuurt via Ikwilhuren (staat er al in) |
+| Woonzeker | ➖ geen aanbod in Amsterdam gevonden |
 | Amvest, Greystar, Wonam | 🔧 geen aanbod op eigen site gevonden; verhuren vaak via makelaars en Pararius |
 | Bouwinvest | ⛔ |
 
@@ -58,9 +58,13 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 
 **✅ Draait (20):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
 
-**🔧 Bleek bij het toevoegen toch maatwerk (4):** Friedmann Housing, ADD Makelaardij, DSTRCT, Carla van den Brink: hun aanbod wordt pas later in de pagina geladen.
+**Bij het toevoegen bleek maatwerk nodig:** zie hierboven.
 
-**🔧 Maatwerk (3):** PCW Housing, vb&t Verhuurmakelaars, Amsterdam Beautiful.
+**✅ Maatwerk, draait sinds 31 oktober (2):** vb&t Verhuurmakelaars (via hun API, alle pagina's één keer per uur), Friedmann Housing.
+
+**➖ Maatwerk bekeken, levert niets op:** PCW Housing (zoekdienst, geen eigen aanbod online), DSTRCT (vrijwel alleen koop; 2 huurwoningen zonder links), Amsterdam Beautiful (gemeubileerde expat-woningen; vallen af).
+
+**⛔ Bij maatwerk bleek:** ADD Makelaardij (reCAPTCHA), Carla van den Brink (menscheck op de aanbodpagina), Interhouse (volledig aanbod via een pad dat robots.txt verbiedt; alleen de uitgelichte woningen op de voorpagina worden gelezen).
 
 **⛔ Blokkeren scripts (9):** Incity Real Estate (alleen servers zoals GitHub), Domica, Broersma, MVA, Amsterdam Housing, Housing Experts, Koops Expat Services, My Home Amsterdam, Homes for Expats. Deze zetten hun aanbod vrijwel altijd ook op Pararius of Funda, dus via de e-mailalerts komen ze toch binnen.
 

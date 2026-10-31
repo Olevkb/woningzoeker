@@ -138,3 +138,9 @@ makelaars:
     url: https://www.kamer.nl/huren/appartement-amsterdam/
     link: ^/huren/appartement-amsterdam/(?!wijk-)[^/]+/[^/]+
     plaats: Amsterdam
+
+  # --- toegevoegd 31 oktober 2026: maatwerk ---
+  - naam: Friedmann Housing
+    url: https://www.friedmannhousing.nl/nl/huur-aanbod/
+    link: ^/nl/[^/]+/?$
+    query: category=2

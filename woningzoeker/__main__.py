@@ -68,6 +68,12 @@ class Zoeker:
         teller = self.opslag.meta_haal("teller", {"bekeken": 0, "gemeld": 0})
         matches: list[Woning] = []
         for bron in maak_bronnen(s["bronnen"], MAP / "makelaars.yaml"):
+            if bron.interval_minuten:  # zware bron: niet bij elke scan
+                laatst = self.opslag.meta_haal(f"laatst:{bron.naam}")
+                if laatst and datetime.now() - datetime.fromisoformat(laatst) < timedelta(minutes=bron.interval_minuten):
+                    continue
+                if not droog:
+                    self.opslag.meta_bewaar(f"laatst:{bron.naam}", datetime.now().isoformat())
             woningen = self._haal(bron, droog)
             nieuw = [w for w in woningen if not self.opslag.is_gezien(w.sleutel)]
             log.info("%s: %d advertenties, %d nieuw", bron.naam, len(woningen), len(nieuw))

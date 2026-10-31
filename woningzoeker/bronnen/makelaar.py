@@ -20,10 +20,11 @@ ANDERE_WONINGEN = re.compile(
 
 
 class Makelaar(Bron):
-    def __init__(self, naam: str, url: str, link: str, plaats: str = "", alleen: str = ""):
+    def __init__(self, naam: str, url: str, link: str, plaats: str = "", alleen: str = "", query: str = ""):
         self.naam = naam
         self.url = url
         self.link = re.compile(link)
+        self.query = re.compile(query) if query else None  # voor sites waar alleen het ?-deel advertenties onderscheidt
         self.plaats = plaats  # vaste plaatsnaam als de lijst al op die plaats gefilterd is
         self.alleen = re.compile(alleen, re.I) if alleen else None
         self.aantal_links = 0
@@ -37,7 +38,10 @@ class Makelaar(Bron):
         links = {}
         for a in soup.find_all("a", href=True):
             url = urljoin(self.url, a["href"]).split("#")[0]
-            if self.link.search(urlparse(url).path) and urlparse(url).netloc == urlparse(self.url).netloc:
+            p = urlparse(url)
+            if self.query and not self.query.search(p.query):
+                continue
+            if self.link.search(p.path) and p.netloc == urlparse(self.url).netloc:
                 links.setdefault(url, a)
         self.aantal_links = len(links)
         uit = []

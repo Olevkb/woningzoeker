@@ -95,6 +95,35 @@ class AdresUitLink(unittest.TestCase):
                 self.assertEqual(adres_uit_url(url), verwacht)
 
 
+class Maatwerkbronnen(unittest.TestCase):
+    def test_vbt_woning(self):
+        from woningzoeker.bronnen.vbt import Vbt
+
+        huis = {  # opbouw zoals de API van vb&t hem op 31 oktober teruggaf
+            "id": "abc123", "url": "/woning/amsterdam-westerdoksdijk-259b", "image": "/images/x/westerdoksdijk",
+            "address": {"city": "Amsterdam", "house": "Westerdoksdijk 259-B"},
+            "prices": {"category": "rent", "rental": {"price": 1950, "serviceCharges": 120, "securityDeposit": 0, "minMonths": 12}},
+            "status": {"name": "available", "code": 1}, "attributes": {"type": {"category": "apartment"}},
+            "plot": 77, "rooms": 3, "acceptance": "2026-12-01T00:00:00.000Z", "coordinate": [4.89, 52.38], "usps": [],
+        }
+        w = Vbt()._woning(huis)
+        self.assertEqual((w.straat, w.huisnummer, w.prijs, w.prijs_soort, w.kamers, w.m2, w.soort), ("Westerdoksdijk", "259-B", 1950, "kaal", 3, 77, "appartement"))
+        self.assertIsNone(Vbt()._woning({**huis, "status": {"name": "rentinuse"}}))  # al verhuurd
+        self.assertIsNone(Vbt()._woning({**huis, "address": {"city": "Rotterdam", "house": "Coolsingel 1"}}))
+
+    def test_status_van_advertentiepagina_wint(self):
+        from pathlib import Path
+
+        import yaml
+
+        from woningzoeker.filters import Filter
+        from woningzoeker.model import Woning
+
+        cfg = yaml.safe_load((Path(__file__).resolve().parent.parent / "config.yaml").read_text(encoding="utf-8"))
+        w = Woning(bron="Vesteda", id="1", url="x", plaats="Amsterdam", prijs=2040, slaapkamers=2, m2=97, status="gereserveerd")
+        self.assertEqual(Filter(cfg).basis(w), "gereserveerd")
+
+
 class EmailAlert(unittest.TestCase):
     def test_pararius_alert(self):
         html = """<html><body><table>

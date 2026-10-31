@@ -131,6 +131,7 @@ tekst:
   inkomenseis:
     - '\b([2-5](?:[.,]\d)?) ?(?:x|×|keer|maal|times) (?:de |het |the )?(?:kale |bruto |gross |netto |monthly |maand)*(?:huur|rent|huurprijs|maandhuur|inkomen|income)'
     - inkomenseis
+    - inkomensvoorwaarden|inkomensvereiste|inkomensnorm
     - income requirements?
     - (minimum|gross) (monthly |annual )?income of
     - inkomen van (minimaal|ten minste|minstens)
@@ -176,6 +177,8 @@ scan:
     - huurstunt
     - kamernet
     - 123wonen
+    - vesteda
+    - vbt
     - gmail
   # Bij de allereerste scan alleen advertenties melden die niet ouder zijn dan dit.
   eerste_scan_max_uren: 48

@@ -42,6 +42,13 @@ class Web:
         return rp.can_fetch(USER_AGENT, url)
 
     def get(self, url: str) -> requests.Response:
+        return self._vraag("GET", url)
+
+    def post_json(self, url: str, data: dict) -> dict:
+        """Voor sites die hun aanbod via een eigen zoek-API leveren (zelfde regels: robots.txt en pauze)."""
+        return self._vraag("POST", url, json=data).json()
+
+    def _vraag(self, methode: str, url: str, **kw) -> requests.Response:
         if not self._mag(url):
             raise Geweigerd(url)
         host = urlparse(url).netloc
@@ -49,7 +56,7 @@ class Web:
         if wacht > 0:
             time.sleep(wacht)
         self._laatste[host] = time.time()
-        r = self.sessie.get(url, timeout=30)
+        r = self.sessie.request(methode, url, timeout=30, **kw)
         r.raise_for_status()
         return r
 
