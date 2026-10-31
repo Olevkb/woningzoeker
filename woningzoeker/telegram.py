@@ -34,10 +34,7 @@ class Telegram:
         self._stuur("sendMessage", text=tekst, parse_mode="HTML", disable_web_page_preview=True)
 
     def woning(self, w: Woning, cfg: dict):
-        knoppen = {"inline_keyboard": [[{"text": "👉 Bekijk advertentie", "url": w.url}]]}
-        if w.adres:
-            kaart = f"https://www.google.com/maps/search/?api=1&query={quote_plus(f'{w.adres}, {w.plaats or 'Amsterdam'}')}"
-            knoppen["inline_keyboard"][0].append({"text": "🗺 Kaart", "url": kaart})
+        knoppen = knoppen_voor(w)
         tekst = opmaak(w, cfg)
         if w.foto:
             try:
@@ -46,6 +43,29 @@ class Telegram:
             except (RuntimeError, requests.RequestException):
                 pass  # foto werd niet geaccepteerd, stuur dan alleen tekst
         self._stuur("sendMessage", text=tekst, parse_mode="HTML", reply_markup=knoppen, disable_web_page_preview=True)
+
+
+# Verzamelsites waar reageren meestal een betaald account vraagt. Dezelfde woning staat vaak ook bij de makelaar zelf.
+BETAALD_REAGEREN = {
+    "Rentola": "rentola.nl",
+    "Huurstunt": "huurstunt.nl",
+    "Kamernet": "kamernet.nl",
+    "Kamer.nl": "kamer.nl",
+}
+
+
+def knoppen_voor(w: Woning) -> dict:
+    rij = [{"text": "👉 Bekijk advertentie", "url": w.url}]
+    if w.adres:
+        kaart = f"https://www.google.com/maps/search/?api=1&query={quote_plus(f'{w.adres}, {w.plaats or 'Amsterdam'}')}"
+        rij.append({"text": "🗺 Kaart", "url": kaart})
+    knoppen = [rij]
+    if w.bron in BETAALD_REAGEREN and w.straat:
+        # zelfde adres zoeken, zonder de betaalde verzamelsites: zo kom je bij de makelaar, Pararius of Funda
+        zonder = " ".join(f"-site:{d}" for d in BETAALD_REAGEREN.values())
+        zoek = f'"{w.adres or w.straat}" {w.plaats or "Amsterdam"} huur {zonder}'
+        knoppen.append([{"text": "🔎 Zoek de makelaar (gratis reageren)", "url": f"https://www.google.com/search?q={quote_plus(zoek)}"}])
+    return {"inline_keyboard": knoppen}
 
 
 def euro(bedrag: float) -> str:
@@ -97,5 +117,7 @@ def opmaak(w: Woning, cfg: dict) -> str:
     bron = f"via {e(w.bron)}"
     geleden = hoe_lang_geleden(w.geplaatst)
     regels.append(f"🕒 {geleden + ' · ' if geleden else ''}{bron}")
+    if w.bron in BETAALD_REAGEREN:
+        regels.append(f"💳 reageren via {e(w.bron)} kost meestal geld; met 🔎 vind je vaak de makelaar zelf")
     regels.extend(e(label) for label in w.labels if not label.startswith("⚠️"))
     return "\n".join(regels)

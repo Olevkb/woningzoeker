@@ -124,6 +124,24 @@ class Maatwerkbronnen(unittest.TestCase):
         self.assertEqual(Filter(cfg).basis(w), "gereserveerd")
 
 
+class Melding(unittest.TestCase):
+    def test_zoek_de_makelaar_alleen_bij_betaalde_verzamelsites(self):
+        from urllib.parse import parse_qs, urlparse
+
+        from woningzoeker.model import Woning
+        from woningzoeker.telegram import knoppen_voor
+
+        rentola = Woning(bron="Rentola", id="1", url="https://rentola.nl/listings/x", straat="Kerkstraat", huisnummer="256-1", plaats="Amsterdam")
+        knoppen = knoppen_voor(rentola)["inline_keyboard"]
+        self.assertEqual(len(knoppen), 2)
+        zoek = parse_qs(urlparse(knoppen[1][0]["url"]).query)["q"][0]
+        self.assertIn('"Kerkstraat 256-1" Amsterdam huur', zoek)
+        self.assertIn("-site:rentola.nl", zoek)
+
+        hausing = Woning(bron="Hausing", id="2", url="https://hausing.com/for-rent/x", straat="Kerkstraat", plaats="Amsterdam")
+        self.assertEqual(len(knoppen_voor(hausing)["inline_keyboard"]), 1)  # bij de makelaar zelf: geen extra knop
+
+
 class EmailAlert(unittest.TestCase):
     def test_pararius_alert(self):
         html = """<html><body><table>
