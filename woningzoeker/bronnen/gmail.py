@@ -5,20 +5,16 @@ De inbox wordt alleen gelezen: er wordt niets verwijderd, verplaatst of als gele
 
 import email
 import email.utils
-import hashlib
 import imaplib
 import logging
 import os
 import re
 from email.policy import default
-from urllib.parse import urljoin, urlparse
-
-import requests
 from bs4 import BeautifulSoup
 
 from .. import tekst as t
 from ..model import Woning
-from ..web import USER_AGENT, Web
+from ..web import Web
 from . import Bron, tijdstip
 from .makelaar import adres_uit_url
 
@@ -39,7 +35,6 @@ class Gmail(Bron):
     def __init__(self):
         self.adres = os.environ.get("GMAIL_ADRES", "")
         self.wachtwoord = os.environ.get("GMAIL_APP_WACHTWOORD", "").replace(" ", "")
-        self._omleidingen: dict[str, str] = {}
 
     def gezond(self, woningen) -> bool:
         return True  # geen nieuwe alerts is normaal; inlogfouten komen als foutmelding
@@ -68,81 +63,58 @@ class Gmail(Bron):
                     yield email.message_from_bytes(inhoud[0][1], policy=default)
 
     def uit_bericht(self, bericht) -> list[Woning]:
+        """Alle woningen uit één alertmail, gelezen uit de mail zelf (de site wordt niet geopend)."""
         afzender = str(bericht.get("From", "")).lower()
         portaal = next((v for k, v in PORTALEN.items() if k in afzender), None)
         if portaal is None:
             return []
         naam, patroon = portaal
-        deel = bericht.get_body(preferencelist=("html", "plain"))
+        deel = bericht.get_body(preferencelist=("html",))
         if deel is None:
             return []
-        inhoud = deel.get_content()
+        soup = BeautifulSoup(deel.get_content(), "html.parser")
         ontvangen = tijdstip(email.utils.parsedate_to_datetime(bericht["Date"]).isoformat()) if bericht["Date"] else None
-        soup = BeautifulSoup(inhoud, "html.parser") if deel.get_content_type() == "text/html" else None
-        if soup is None:
-            return []
 
-        # eerst van elke link bepalen naar welke advertentie hij wijst (ook via doorstuurlinks)
-        doelen = {}
+        # per woning één blok: de foto-link en de titel-link horen bij hetzelfde blok; voorkeur voor de titel
+        kaarten: dict[int, tuple] = {}
         for a in soup.find_all("a", href=True):
-            echt = self._doel(a["href"], patroon)
-            if echt and patroon.search(echt):
-                doelen[id(a)] = echt
-
-        kaarten: dict[str, tuple] = {}
-        for a in soup.find_all("a", href=True):
-            echt = doelen.get(id(a))
-            if not echt:
+            if not a["href"].startswith("http"):
                 continue
-            kaart = _kaart(a, echt, doelen)
-            tekst = kaart.get_text(" ", strip=True)
-            if echt not in kaarten or len(tekst) > len(kaarten[echt][1]):
-                img = kaart.find("img")
-                kaarten[echt] = (a["href"], tekst, img.get("src", "") if img else "")
+            kaart = _kaart(a)
+            if kaart is None:
+                continue
+            eerder = kaarten.get(id(kaart))
+            if eerder is None or (not eerder[1].get_text(strip=True) and a.get_text(strip=True)):
+                kaarten[id(kaart)] = (kaart, a)
 
         uit = []
-        for echt, (link, tekst, foto) in kaarten.items():
-            pad = urlparse(echt).path.rstrip("/")
-            w = Woning(bron=naam, id=pad or hashlib.sha1(tekst.encode()).hexdigest()[:12], url=echt, geplaatst=ontvangen, foto=foto)
+        for kaart, a in kaarten.values():
+            tekst = kaart.get_text(" ", strip=True)
+            titel = a.get_text(" ", strip=True)
+            # alerts gebruiken doorstuurlinks (die scripts weigeren); in je browser leiden ze gewoon naar de advertentie
+            link = a["href"].split("?")[0] if patroon.search(a["href"]) else a["href"]
+            w = Woning(bron=naam, id="", url=link, geplaatst=ontvangen, foto=_foto(kaart))
             t.vul_aan(w, tekst)
+            if w.prijs is None:
+                continue  # geen woning (bv. reclame voor een abonnement)
             w.omschrijving = tekst  # alles wat de alert over de woning zegt gaat door de tekstfilters
-            straat, nr, pc = adres_uit_url(echt)
-            w.straat, w.huisnummer = t.adres(tekst)
+            straat, nr, pc = adres_uit_url(link) if patroon.search(link) else ("", "", "")
+            w.straat, w.huisnummer = t.adres(titel)
+            if not w.straat and re.fullmatch(r"[A-Z][\w.'’ -]{2,40}", titel):
+                w.straat = titel  # alleen een straatnaam, zonder huisnummer
             if not w.straat and straat:
                 w.straat, w.huisnummer = straat, nr
             w.postcode = w.postcode or pc
-            w.hints = [x for x in (f"{straat} {nr}".strip(), tekst[:200]) if x]
-            if re.search(r"\bAmsterdam\b", tekst + echt, re.I):
+            w.hints = [x for x in (f"{w.straat} {w.huisnummer}".strip(), tekst[:200]) if x]
+            if re.search(r"\bAmsterdam\b", tekst, re.I):
                 w.plaats = "Amsterdam"
-            if re.search(r"/(kamer|room)[^/]*-te-huur/|/kamer-|/room-", echt):
+            if re.search(r"/(kamer|room)[^/]*-te-huur/|/kamer-|/room-", link):
                 w.soort = "kamer"
+            # vaste sleutel per woning, ook als dezelfde woning in een latere mail met een andere link staat
+            w.id = f"{re.sub(r'[^a-z0-9]', '', w.straat.lower())}-{w.huisnummer}-{w.postcode}-{w.prijs}"
             w.labels.append(f"❔ via {naam}-alert: voorwaarden (studenten, garantsteller, inschrijving) niet gecontroleerd")
             uit.append(w)
         return uit
-
-    def _doel(self, href: str, patroon) -> str:
-        """De echte advertentielink. Alerts gebruiken vaak doorstuurlinks; die volgen we zonder de site zelf te openen."""
-        if not href.startswith("http"):
-            return ""
-        if patroon.search(href):
-            return href.split("?")[0]
-        if href in self._omleidingen:
-            return self._omleidingen[href]
-        url, doel = href, ""
-        try:
-            for _ in range(5):
-                r = requests.head(url, allow_redirects=False, timeout=10, headers={"User-Agent": USER_AGENT})
-                volgende = r.headers.get("Location")
-                if not volgende:
-                    break
-                url = urljoin(url, volgende)
-                if patroon.search(url):
-                    doel = url.split("?")[0]
-                    break
-        except requests.RequestException:
-            pass
-        self._omleidingen[href] = doel
-        return doel
 
 
 def _map_alle_mail(imap) -> str:
@@ -156,18 +128,33 @@ def _map_alle_mail(imap) -> str:
     return "INBOX"
 
 
-def _kaart(a, eigen_doel: str, doelen: dict):
-    """Het blok rond een link in de e-mail met prijs, adres en kenmerken van díe woning.
+_HUURPRIJS = re.compile(r"€\s?\d[\d.,]*(?:,-)?\s*(?:per\s+maand|/\s?maand|p/m|p\.m\.|/\s?mnd|per\s+month|/\s?month)", re.I)
 
-    Zo ver omhoog als kan, maar nooit zo ver dat er een link naar een andere woning in komt.
+
+def _kaart(a):
+    """Het blok van één woning rond een link: zo groot mogelijk, zolang er precies één huurprijs in staat.
+
+    Geeft None voor links die niet bij een woning horen (afmelden, 'bekijk alle woningen', reclame).
     """
-    kaart = a
-    for _ in range(10):
-        ouder = kaart.parent
-        if ouder is None or ouder.name in ("body", "html", "[document]"):
+    kaart, gevonden = a, None
+    for _ in range(14):
+        tekst = kaart.get_text(" ", strip=True)
+        prijzen = len(_HUURPRIJS.findall(tekst))
+        if prijzen > 1 or len(tekst) > 800:
             break
-        andere = {doelen[id(x)] for x in ouder.find_all("a", href=True) if id(x) in doelen} - {eigen_doel}
-        if andere or len(ouder.get_text(" ", strip=True)) > 1500:
+        if prijzen == 1:
+            gevonden = kaart
+        if kaart.parent is None or kaart.parent.name in ("body", "html", "[document]"):
             break
-        kaart = ouder
-    return kaart
+        kaart = kaart.parent
+    return gevonden
+
+
+def _foto(kaart) -> str:
+    img = kaart.find("img", src=True)
+    if img:
+        return img["src"]
+    for el in kaart.find_all(style=True):
+        if m := re.search(r"url\(['\"]?(https?://[^'\")]+)", el["style"]):
+            return m.group(1)
+    return ""

@@ -158,6 +158,41 @@ class EmailAlert(unittest.TestCase):
             with self.subTest(slug):
                 self.assertEqual(filt.basis(w) is None, kaarten[slug][2], (slug, filt.basis(w)))
 
+    def test_echte_pararius_opmaak_31_oktober(self):
+        """Opmaak van de echte Pararius-alert: doorstuurlinks, alleen een straatnaam als titel, foto als achtergrond."""
+
+        def kaart(n, straat, adres, prijs, maten):
+            link = f"https://url2220.pararius.nl/ls/click?upn=u001.test{n}"
+            return f"""<table class="listing-card"><tr><td><table class="listing-card__inner">
+              <tr class="listing-card-image"><td height="180" style="background-image:url('https://casco.pararius.nl/{n}.jpg')">
+                <a href="{link}"><span></span></a></td></tr>
+              <tr class="listing-card-content"><td><div>
+                <a href="{link}"><span><strong>{straat}</strong></span></a><br>
+                <span class="listing-card-content-address">{adres}</span><br>
+                <strong>{prijs}</strong><br> {maten}</div></td></tr></table></td></tr></table>"""
+
+        html = (
+            '<a href="https://url2220.pararius.nl/ls/click?upn=u001.plus">Lees meer over de voordelen van Pararius+</a>'
+            "<p>Pararius+ voor € 29,95 per maand</p>"
+            + kaart(1, "Vespuccistraat", "1057CM Amsterdam (De Baarsjes)", "€ 2.050 per maand", "61 m² · 3 kamers · Bouwjaar 1926")
+            + kaart(2, "Kanaalstraat", "1054XG Amsterdam (Overtoomse Sluis)", "€ 2.400 per maand", "70 m² · 3 kamers · Bouwjaar 1910")
+            + '<a href="https://url2220.pararius.nl/ls/click?upn=u001.alle">Bekijk alle woningen</a>'
+            + '<a href="https://url2220.pararius.nl/ls/click?upn=u001.uit">Uitschrijven</a>'
+        )
+        bericht = EmailMessage()
+        bericht["From"] = "Pararius <noreply@pararius.nl>"
+        bericht["Date"] = format_datetime(datetime.now(timezone.utc))
+        bericht.set_content("zie html")
+        bericht.add_alternative(html, subtype="html")
+
+        woningen = Gmail().uit_bericht(bericht)
+        self.assertEqual([w.straat for w in woningen], ["Vespuccistraat", "Kanaalstraat"])  # geen reclame, geen knoppen
+        w = woningen[0]
+        self.assertEqual((w.prijs, w.m2, w.kamers, w.postcode, w.plaats), (2050, 61, 3, "1057CM", "Amsterdam"))
+        self.assertEqual(w.url, "https://url2220.pararius.nl/ls/click?upn=u001.test1")
+        self.assertEqual(w.foto, "https://casco.pararius.nl/1.jpg")
+        self.assertEqual(w.id, "vespuccistraat--1057CM-2050")  # vast, ook als dezelfde woning later met een andere link komt
+
     def test_funda_link_geeft_adres(self):
         self.assertEqual(
             adres_uit_url("https://www.funda.nl/detail/huur/amsterdam/appartement-weesperzijde-112-h/43123456/"),
