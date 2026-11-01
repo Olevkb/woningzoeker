@@ -240,6 +240,31 @@ class EmailAlert(unittest.TestCase):
         self.assertEqual(w.foto, "https://casco.pararius.nl/1.jpg")
         self.assertEqual(w.id, "vespuccistraat--1057CM-2050")  # vast, ook als dezelfde woning later met een andere link komt
 
+    def test_echte_funda_opmaak_1_november(self):
+        """Funda-alert: foto in een eigen blok boven de tekst, doorstuurlinks via links.funda.nl."""
+
+        def woning(n, foto, regels):
+            link = f"https://links.funda.nl/s/c/test{n}"
+            return (f'<table><tr><td class="pmr0"><table><tr><td class="col-lg-12-img"><a href="{link}"><img src="{foto}"></a>'
+                    f'</td></tr></table></td></tr></table><table><tr><td><a href="{link}">{regels[0]}</a><br>'
+                    + "<br>".join(regels[1:]) + "</td></tr></table>")
+
+        html = (
+            '<img src="https://library.iterable.com/2349/11011/funda-logo.png">'
+            + woning(1, "https://cloud.funda.nl/tiara-media/aaa/1", ["Reyer Anslostraat 14 3", "1054 KV Amsterdam", "€ 2.450 /maand", "54 m² • 3 kamers"])
+            + woning(2, "https://cloud.funda.nl/tiara-media/bbb/2", ["Durgerdammerdijk 1014 A", "1026 CR Amsterdam", "€ 2.540 /maand", "135 m² • 2 kamers"])
+        )
+        bericht = EmailMessage()
+        bericht["From"] = "Funda <notificaties@service.funda.nl>"
+        bericht["Date"] = format_datetime(datetime.now(timezone.utc))
+        bericht.set_content("zie html")
+        bericht.add_alternative(html, subtype="html")
+
+        a, b = Gmail().uit_bericht(bericht)
+        self.assertEqual((a.straat, a.postcode, a.prijs, a.m2, a.kamers), ("Reyer Anslostraat", "1054KV", 2450, 54, 3))
+        self.assertEqual(a.foto, "https://cloud.funda.nl/tiara-media/aaa/1")  # eigen foto, niet het logo
+        self.assertEqual(b.foto, "https://cloud.funda.nl/tiara-media/bbb/2")
+
     def test_funda_link_geeft_adres(self):
         self.assertEqual(
             adres_uit_url("https://www.funda.nl/detail/huur/amsterdam/appartement-weesperzijde-112-h/43123456/"),

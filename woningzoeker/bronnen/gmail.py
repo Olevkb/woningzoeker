@@ -87,7 +87,7 @@ class Gmail(Bron):
             if eerder is None or (not eerder[1].get_text(strip=True) and a.get_text(strip=True)):
                 kaarten[id(kaart)] = (kaart, a)
 
-        uit = []
+        uit, gebruikte_fotos = [], set()
         for kaart, a in kaarten.values():
             tekst = kaart.get_text(" ", strip=True)
             titel = a.get_text(" ", strip=True)
@@ -97,6 +97,11 @@ class Gmail(Bron):
             t.vul_aan(w, tekst)
             if w.prijs is None:
                 continue  # geen woning (bv. reclame voor een abonnement)
+            if not w.foto:
+                # Funda zet de foto in een eigen blok boven de tekst: neem de dichtstbijzijnde nog ongebruikte foto
+                img = kaart.find_previous("img", src=lambda s: _is_foto(s) and s not in gebruikte_fotos)
+                w.foto = img["src"] if img else ""
+            gebruikte_fotos.add(w.foto)
             w.omschrijving = tekst  # alles wat de alert over de woning zegt gaat door de tekstfilters
             straat, nr, pc = adres_uit_url(link) if patroon.search(link) else ("", "", "")
             w.straat, w.huisnummer = t.adres(titel)
@@ -148,6 +153,13 @@ def _kaart(a):
             break
         kaart = kaart.parent
     return gevonden
+
+
+def _is_foto(src) -> bool:
+    """Een echte woningfoto, geen logo, icoon of meet-pixel van de mailverzender."""
+    return bool(src) and src.startswith("http") and not re.search(
+        r"logo|icon|pixel|spacer|track|/eo/|/open|iterable\.com|spmailtechno|\.gif\b|1x1", src, re.I
+    )
 
 
 def _foto(kaart) -> str:
