@@ -144,3 +144,95 @@ makelaars:
     url: https://www.friedmannhousing.nl/nl/huur-aanbod/
     link: ^/nl/[^/]+/?$
     query: category=2
+
+  # --- toegevoegd 2 november 2026: makelaars met de meeste huurwoningen in Amsterdam op Pararius ---
+  - naam: LIV Residential
+    url: https://livresidential.nl/huurwoningen/amsterdam
+    link: ^/huurwoningen/amsterdam/amsterdam/[^/]+$
+    plaats: Amsterdam
+
+  - naam: The Property Agency
+    url: https://thepropertyagency.nl/residential-listings/rent
+    link: ^/residential-listings/rent/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: Visch & Van Zeggelaar
+    url: https://www.visch-vanzeggelaar.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: The Brokers Club
+    url: https://www.thebrokersclub.nl/aanbod
+    link: ^/aanbod/\d+/[A-Z]+\d+$
+    alleen: ^(?=.*\bamsterdam\b)(?=.*p/m)   # koop en huur staan door elkaar; huur is '€ 3.500 p/m'
+
+  - naam: Another Home Abroad
+    url: https://www.anotherhomeabroad.nl/aanbod/woningaanbod/
+    link: ^/aanbod/woningaanbod/amsterdam/huur/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Out Amsterdam
+    url: https://out-amsterdam.nl/verhuur/
+    link: ^/huurhuizen/[^/]+/?$
+    plaats: Amsterdam
+
+  - naam: Hoen Vastgoedbeheer
+    url: https://www.hoen.nl/huurwoningen
+    link: ^/huurwoningen/[^/]+$
+    alleen: \bamsterdam\b
+
+  - naam: Horatio Makelaardij
+    url: https://www.horatio-makelaardij.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: NGH Real Estate
+    url: https://nghrealestate.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: Relocation Amsterdam
+    url: https://www.relocation-amsterdam.nl/properties/
+    link: ^/properties/H\d+/?$
+    alleen: ^(?=.*\bamsterdam\b)(?=.*€\s?\d\.\d{3}(?![.\d]))   # koop en huur door elkaar; huur is '€ 2.375', koop '€ 439.000'
+
+  - naam: Keizerskroon Makelaars
+    url: https://www.keizerskroonmakelaars.nl/aanbod/huurwoningen/
+    link: ^/woningen/[^/]+-amsterdam-[0-9a-f]+/?$
+    plaats: Amsterdam
+
+  - naam: House of Rentals
+    url: https://www.houseofrentals.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: Valerius Rentals
+    url: https://www.valeriusrentals.nl/aanbod-huur/
+    link: ^/te-huur/[^/]+-amsterdam/?$
+    plaats: Amsterdam
+
+  - naam: Lion Makelaars
+    url: https://www.lionmakelaars.nl/woningaanbod/huur
+    link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
+    plaats: Amsterdam
+
+  - naam: Alcoco
+    url: https://alcoco.nl/aanbod
+    link: ^/object/[^/]+/?$
+    alleen: ^(?=.*\bamsterdam\b)(?=.*per maand)   # koop en huur door elkaar
+
+  - naam: Koops Makelaardij
+    url: https://www.koopsmakelaardij.nl/
+    link: -te-huur/amsterdam/[^/]+/\d+\.html$
+    plaats: Amsterdam
+
+  - naam: BIC Vastgoed
+    url: https://bic-vastgoed.nl/woningen/
+    link: ^/woning/amsterdam-[^/]+/?$
+    plaats: Amsterdam
+    alleen: huurprijs   # koop en huur door elkaar
+
+  - naam: HB Housing
+    url: https://www.hbhousing.nl/aanbod/huur/Amsterdam/
+    link: (?i)^/aanbod/huur/amsterdam/[^/]+/[^/]+/?$
+    plaats: Amsterdam

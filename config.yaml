@@ -71,6 +71,12 @@ huurtoeslag:
 tekst:
   # Advertentie wordt OVERGESLAGEN als een van deze patronen erin staat.
   uitsluiten:
+    # koopwoning: sommige makelaars zetten koop en huur door elkaar, en '€ 439.000' mag nooit als huur doorgaan
+    - kosten koper
+    - \bk\.k\.
+    - vrij op naam
+    - \bv\.o\.n\.
+    - \bkoopprijs\b
     # studenten niet welkom, alleen werkenden, bedrijven of senioren
     - geen studenten\b
     - niet (geschikt )?(voor|aan) studenten

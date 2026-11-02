@@ -1,6 +1,6 @@
 # Bronnen: waar staan huurwoningen in Amsterdam?
 
-Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe bronnen. Elke bron is getest op: bereikbaar, toegestaan volgens robots.txt, geen menscheck, en staan de advertenties echt in de pagina.
+Inventarisatie van 30 oktober 2026, bijgewerkt op 2 november 2026. Elke bron is getest op: bereikbaar, toegestaan volgens robots.txt, geen menscheck, en staan de advertenties echt in de pagina.
 
 **Legenda**
 - ✅ draait al in de zoeker
@@ -64,6 +64,10 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 
 **➖ Maatwerk bekeken, levert niets op:** PCW Housing (zoekdienst, geen eigen aanbod online), DSTRCT (vrijwel alleen koop; 2 huurwoningen zonder links), Amsterdam Beautiful (gemeubileerde expat-woningen; vallen af).
 
+**✅ Toegevoegd 2 november (18):** uit de Pararius-lijst van verhuurmakelaars in Amsterdam, gesorteerd op aantal huurwoningen (alle kantoren met 5 of meer, die nog niet in de zoeker zaten): LIV Residential, The Property Agency, Visch & Van Zeggelaar, The Brokers Club, Another Home Abroad, Out Amsterdam, Hoen Vastgoedbeheer, Horatio Makelaardij, NGH Real Estate, Relocation Amsterdam, Keizerskroon Makelaars, House of Rentals, Valerius Rentals, Lion Makelaars, Alcoco, Koops Makelaardij, BIC Vastgoed, HB Housing. Bij The Brokers Club, Relocation Amsterdam, Alcoco en BIC staan koop en huur door elkaar; alleen de huurwoningen worden gelezen, en koopwoningen ('kosten koper', 'k.k.') vallen ook in het filter af.
+
+**➖ Uit diezelfde lijst afgevallen:** aanbod wordt pas later in de pagina geladen (Dutch Housing Centre, Grand Relocation, Rappange, CITYHOP, City Homes, TVN Real Estate, Peter Bruin, Hollandsche Makelaardij, Amsterdam Wonen, Wooove, Bright Apartments; Keij & Stefels zit achter een inlog); heel Nederland op één lijst zonder Amsterdam-filter (ViaDaan, FRIS); Inter Immo weigert scripts (⛔); Grand Apartments (gemeubileerd, koop in het buitenland ertussen); GoHome (app); Openbare Makelaardij, Digimakelaars en Huizenbalie (landelijke internetmakelaars, aanbod staat op Funda/Pararius).
+
 **⛔ Bij maatwerk bleek:** ADD Makelaardij (reCAPTCHA), Carla van den Brink (menscheck op de aanbodpagina), Interhouse (volledig aanbod via een pad dat robots.txt verbiedt; alleen de uitgelichte woningen op de voorpagina worden gelezen).
 
 **⛔ Blokkeren scripts (9):** Incity Real Estate (alleen servers zoals GitHub), Domica, Broersma, MVA, Amsterdam Housing, Housing Experts, Koops Expat Services, My Home Amsterdam, Homes for Expats. Deze zetten hun aanbod vrijwel altijd ook op Pararius of Funda, dus via de e-mailalerts komen ze toch binnen.
@@ -72,8 +76,8 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 
 ## Hoe we de lijst verder compleet maken
 
-Amsterdam heeft honderden makelaars die af en toe iets verhuren. Die zetten dat bijna altijd op Pararius of Funda. Zodra de e-mailalerts binnenkomen, houdt de zoeker bij welke makelaars het vaakst iets in jullie wijken aanbieden. Wie vaak voorkomt en een eigen site heeft, voegen we toe. Daar staan woningen vaak eerder dan op Pararius.
+Amsterdam heeft honderden makelaars die af en toe iets verhuren (Pararius telt er 433). Die zetten dat bijna altijd op Pararius of Funda. De e-mailalerts noemen de makelaar niet, dus de lijst is aangevuld met de Pararius-ranglijst van verhuurmakelaars in Amsterdam (2 november): alle kantoren met 5 of meer huurwoningen staan er nu in of zijn bekeken. Op hun eigen site staan woningen vaak eerder dan op Pararius. Kantoren met minder aanbod komen via de alerts binnen.
 
 ## Bronnen voor deze inventarisatie
 
-[iamexpat.nl](https://www.iamexpat.nl/housing/renting/rental-agencies-netherlands), [expatica.com](https://www.expatica.com/nl/directory/housing/rental-agencies/), [huurda.nl](https://huurda.nl/verhuurmakelaars/amsterdam), [dehuurradar.nl](https://dehuurradar.nl/huursites), [woninghulpnederland.nl](https://www.woninghulpnederland.nl/overzicht), [amsterdamsdagblad.nl](https://www.amsterdamsdagblad.nl/wonen/makelaars-in-amsterdam), [rentalagencyfinder.com](https://www.rentalagencyfinder.com/blog/best-rental-agencies-amsterdam), [Stadgenoot](https://www.stadgenoot.nl/aanbod/beschikbare-woningen/huurwoningen/vrijesectorwoningen), [Rochdale](https://www.rochdale.nl/woning-zoeken/vrije-sector-huur/vrije-sector-huurwoning-zoeken/), [Ymere](https://www.ymere.nl/ik-zoek/middenhuur-en-vrije-sector/toewijzingseisen-middenhuur-en-vrije-sector/), [Vesteda](https://www.vesteda.com/nl/huurwoningen-amsterdam) en zoekopdrachten naar verhuurmakelaars in Amsterdam.
+[Pararius verhuurmakelaars Amsterdam](https://www.pararius.nl/makelaars/amsterdam/verhuur), [iamexpat.nl](https://www.iamexpat.nl/housing/renting/rental-agencies-netherlands), [expatica.com](https://www.expatica.com/nl/directory/housing/rental-agencies/), [huurda.nl](https://huurda.nl/verhuurmakelaars/amsterdam), [dehuurradar.nl](https://dehuurradar.nl/huursites), [woninghulpnederland.nl](https://www.woninghulpnederland.nl/overzicht), [amsterdamsdagblad.nl](https://www.amsterdamsdagblad.nl/wonen/makelaars-in-amsterdam), [rentalagencyfinder.com](https://www.rentalagencyfinder.com/blog/best-rental-agencies-amsterdam), [Stadgenoot](https://www.stadgenoot.nl/aanbod/beschikbare-woningen/huurwoningen/vrijesectorwoningen), [Rochdale](https://www.rochdale.nl/woning-zoeken/vrije-sector-huur/vrije-sector-huurwoning-zoeken/), [Ymere](https://www.ymere.nl/ik-zoek/middenhuur-en-vrije-sector/toewijzingseisen-middenhuur-en-vrije-sector/), [Vesteda](https://www.vesteda.com/nl/huurwoningen-amsterdam) en zoekopdrachten naar verhuurmakelaars in Amsterdam.

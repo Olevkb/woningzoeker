@@ -117,6 +117,9 @@ class Tekst(unittest.TestCase):
             # echte gevallen van kamer.nl (30 okt): kamer in gedeelde woning, en geen huurtoeslag
             "Aantal huisgenoten 0 Huiskamer Gedeeld Toilet Gedeeld Keuken Gedeeld",
             "Borg € 1.575,00 Huurtoeslag mogelijk Niet mogelijk Voorwaarden",
+            # koopwoningen tussen het huuraanbod (BIC, Alcoco, 2 nov): '€ 325.000' mag nooit als huur doorgaan
+            "Palamedesstraat 3-3A Woonoppervlakte 28 m 2 Aantal slaapkamers 1 Koopprijs € 325.000,- k.k.",
+            "Te koop Ennemaborg 39 Amsterdam €545000,- kosten koper 72 m²",
         ]:
             self.assertIsNotNone(self.check(t)[0], t)
 

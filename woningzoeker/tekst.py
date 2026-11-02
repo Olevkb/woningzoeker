@@ -78,14 +78,26 @@ _GETAL = r"(?<![\d.,])(\d{1,2})"
 
 def m2(tekst: str) -> int | None:
     return _eerste(
-        [r"(?<![\d.,])(\d{2,3})(?:[.,]\d{1,2})?\s?(?:m²|m2\b|m\^2|sq\.?\s?m|sqm|square met|vierkante meter)",
+        [r"(?<![\d.,])(\d{2,3})(?:[.,]\d{1,2})?\s?(?:m²|m2\b|m\s2\b|m\^2|sq\.?\s?m|sqm|square met|vierkante meter)",
          r"\b(?:woonoppervlakte|oppervlakte|size|surface)\s*:?\s*(\d{2,3})\b"],
         tekst, 15, 400,
     )
 
 
+# Een kenmerkenlijst is 'label getal' (Kamers 2 Slaapkamers 1) of 'getal label' (4 kamers 3 slaapkamers).
+# Staat er geen getal vóór het label, dan hoort het getal erna bij dat label.
+_NA_LABEL = r"(?<!\d\s)(?<!\d)\b"
+_KAMERS_WAARDE = re.compile(_NA_LABEL + r"((?:aantal\s+)?(?:kamers|rooms))\s*:?\s*(\d{1,2})(?=\s+(?:aantal\s+)?(?:slaapkamers?|bedrooms?)\b)", re.I)
+
+
+def _kenmerken(tekst: str) -> str:
+    tekst = re.sub(r"(\d)\s?m\s([23])\b", lambda m: m[1] + ("m²" if m[2] == "2" else "m³"), tekst)  # '61m 2', '153m 3'
+    return _KAMERS_WAARDE.sub(r"\1 \2 |", tekst)  # 'Kamers 2 Slaapkamers 1': die 2 is het aantal kamers
+
+
 def slaapkamers(tekst: str) -> int | None:
     # 0 telt mee: 'Slaapkamers 0' is een studio, parkeerplek of berging
+    tekst = _kenmerken(tekst)
     return _eerste(
         [_GETAL + r"\s*(?:slaapkamers?|bedrooms?|slpk)\b", r"\b(?:slaapkamers?|bedrooms?)\s*:?\s*(\d{1,2})\b",
          _GETAL + r"-bed(?:room)?\b",
@@ -95,8 +107,10 @@ def slaapkamers(tekst: str) -> int | None:
 
 
 def kamers(tekst: str) -> int | None:
+    tekst = _kenmerken(tekst)
     return _eerste(
-        [r"\b(?:aantal )?kamers\s*:?\s*(\d{1,2})\b", r"\brooms\s*:?\s*(\d{1,2})\b", _GETAL + r"\s*(?:-\s*)?(?:kamers?|rooms?)\b",
+        [_NA_LABEL + r"(?:aantal )?kamers\s*:?\s*(\d{1,2})\b", _NA_LABEL + r"rooms\s*:?\s*(\d{1,2})\b",
+         _GETAL + r"\s*(?:-\s*)?(?:kamers?|rooms?)\b",
          _WOORDGETAL + r"[\s-]?kamer"],
         tekst, 1, 15,
     )

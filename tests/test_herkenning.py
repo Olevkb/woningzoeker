@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from woningzoeker import tekst as t
 from woningzoeker.bronnen.gmail import Gmail
 from woningzoeker.bronnen.makelaar import adres_uit_url
+from woningzoeker.locatie import zelfde_straat
 
 
 class Tekst(unittest.TestCase):
@@ -26,6 +27,21 @@ class Tekst(unittest.TestCase):
                 self.assertEqual(t.m2(tekst), m2)
                 self.assertEqual(t.slaapkamers(tekst), slpk)
                 self.assertEqual(t.kamers(tekst), kamers)
+
+    def test_kenmerkenlijst_label_of_getal_eerst(self):
+        # echte teksten van 2 november; 'Kamers 2 Slaapkamers 1' werd gelezen als 2 slaapkamers
+        gevallen = [
+            # tekst, kamers, slaapkamers, m2
+            ("Woonoppervlakte 61m 2 Inhoud 153m 3 Kamers 2 Slaapkamers 1 Woonlagen 1", 2, 1, 61),  # HB Housing
+            ("Appartement 4 kamers 3 slaapkamers 1 badkamer Bouwjaar 2025 125 m² gebruiksoppervlakte", 4, 3, 125),  # Horatio
+            ("Apartment 3 rooms 2 bedrooms 1 Bathroom Construction year 1910 103 m² liveable area", 3, 2, 103),
+            ("Woonoppervlakte 71 m 2 Slaapkamers 2 Prijs € 4.250,- p/m", None, 2, 71),  # BIC Vastgoed
+            ("Oppervlakte 80 m 2 Aantal kamers 1 Aantal slaapkamers 0 Beschikbaar per", 1, 0, 80),  # Hoen
+            ("Kamers: 3 Slaapkamers: 2", 3, 2, None),
+        ]
+        for tekst, kamers, slpk, m2 in gevallen:
+            with self.subTest(tekst=tekst):
+                self.assertEqual((t.kamers(tekst), t.slaapkamers(tekst), t.m2(tekst)), (kamers, slpk, m2))
 
     def test_kamers_in_woorden(self):
         self.assertEqual(t.slaapkamers("twee slaapkamers aan de achterzijde"), 2)
@@ -293,6 +309,17 @@ class EmailAlert(unittest.TestCase):
             adres_uit_url("https://www.funda.nl/detail/huur/amsterdam/appartement-weesperzijde-112-h/43123456/"),
             ("Weesperzijde", "112-h", ""),
         )
+
+
+
+class Postcode(unittest.TestCase):
+    def test_postcode_moet_bij_de_straat_horen(self):
+        # Keizerskroon (2 nov): onder elke woning staat de postcode van het kantoor; die mag de wijk niet bepalen
+        self.assertFalse(zelfde_straat("Barkentijnkade", "Keizersgracht"))
+        self.assertTrue(zelfde_straat("1e Jan Steenstraat", "Eerste Jan Steenstraat"))
+        self.assertTrue(zelfde_straat("Hans Frankfurthersingel", "P. Hans Frankfurthersingel"))
+        self.assertTrue(zelfde_straat("Pr. Hendrikkade", "Prins Hendrikkade"))
+        self.assertTrue(zelfde_straat("", "Keizersgracht"))  # straat onbekend: postcode is alles wat we hebben
 
 
 if __name__ == "__main__":

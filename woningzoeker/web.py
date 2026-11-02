@@ -61,7 +61,14 @@ class Web:
         return r
 
     def html(self, url: str) -> str:
-        return self.get(url).text
+        r = self.get(url)
+        if "charset" not in r.headers.get("Content-Type", "").lower():
+            # zonder charset gokt requests Latin-1, waardoor '€' als 'â¬' binnenkomt; vrijwel elke site is UTF-8
+            try:
+                return r.content.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+        return r.text
 
 
 def jsonld(html: str) -> list:

@@ -18,6 +18,16 @@ def _plat(tekst: str) -> str:
     return re.sub(r"[^a-z]", "", tekst.lower())
 
 
+_AFKORTINGEN = {"1e": "eerste", "2e": "tweede", "3e": "derde", "4e": "vierde", "5e": "vijfde", "burg": "burgemeester",
+                "prof": "professor", "dr": "doctor", "mr": "meester", "st": "sint", "pr": "prins", "gen": "generaal"}
+
+
+def zelfde_straat(a: str, b: str) -> bool:
+    """Of twee straatnamen dezelfde straat zijn ('1e Jan Steenstraat' = 'Eerste Jan Steenstraat'). Onbekend telt als ja."""
+    a, b = (_plat(re.sub(r"\b(\w+)\.?(?=\s)", lambda m: _AFKORTINGEN.get(m[1].lower(), m[1]), x or "")) for x in (a, b))
+    return not a or not b or a in b or b in a
+
+
 class Locatie:
     def __init__(self, opslag: Opslag, sessie: requests.Session):
         self.opslag = opslag
@@ -47,6 +57,10 @@ class Locatie:
         for sleutel, pad, params, controle in pogingen:
             uitkomst = self._cached(sleutel, pad, params, controle, plaats)
             if not uitkomst["wijken"]:
+                continue
+            if sleutel.startswith("pc:") and not zelfde_straat(w.straat, uitkomst.get("straat", "")):
+                # postcode hoort bij een ander adres, bv. dat van het makelaarskantoor onderaan de pagina
+                w.postcode = ""
                 continue
             if uitkomst.get("straat") and isinstance(controle, str) and controle is not w.straat:
                 w.straat = uitkomst["straat"]
