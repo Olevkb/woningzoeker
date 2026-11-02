@@ -206,11 +206,6 @@ makelaars:
     link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
     plaats: Amsterdam
 
-  - naam: Valerius Rentals
-    url: https://www.valeriusrentals.nl/aanbod-huur/
-    link: ^/te-huur/[^/]+-amsterdam/?$
-    plaats: Amsterdam
-
   - naam: Lion Makelaars
     url: https://www.lionmakelaars.nl/woningaanbod/huur
     link: ^/woningaanbod/huur/amsterdam/[^/]+/[^/]+$
