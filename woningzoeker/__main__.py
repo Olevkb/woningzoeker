@@ -11,6 +11,7 @@
 import argparse
 import logging
 import os
+import re
 import sys
 import time
 from datetime import datetime, timedelta
@@ -24,13 +25,47 @@ from .filters import Filter
 from .locatie import Locatie
 from .model import Woning
 from .opslag import Opslag
-from .telegram import Telegram, opmaak
+from .telegram import Telegram, euro, opmaak, opmaak_kort
 from .web import Geweigerd, Web
 
 MAP = Path(__file__).resolve().parent.parent
 FOUTEN_VOOR_WAARSCHUWING = 6  # zoveel mislukte scans op rij van één site = melding sturen
 # afwijzingen die over de woning zelf gaan en dus ook gelden als dezelfde woning op een andere site staat
 VOORWAARDEN = ("tekst:", "inschrijven", "max ", "short stay")
+# afwijzingen die alleen zeggen dat díe site iets niet vermeldde; die gelden niet voor dezelfde woning elders
+ALLEEN_DIE_SITE = ("wijk onbekend", "geen prijs", "aantal slaapkamers onbekend", "eerste scan", "dubbel in deze scan", "al gemeld")
+# e-mailalerts bevatten alleen een samenvatting; de rest moet van dezelfde woning op een andere site komen
+ALERTBRONNEN = ("Pararius", "Funda", "Huurwoningen.nl")
+
+
+MIN_BESCHRIJVING = 300  # tekens; korter = te weinig om de voorwaarden te kunnen controleren
+
+
+def onzeker_reden(w: Woning) -> str:
+    """Waarom de voorwaarden van deze woning niet te controleren zijn, of '' als dat wel kon."""
+    if w.bron in ALERTBRONNEN and not any(x.startswith("✅") for x in w.labels):
+        return f"de {w.bron}-mail geeft alleen een samenvatting"
+    if len(re.sub(r"\s+", " ", w.omschrijving or "").strip()) < MIN_BESCHRIJVING:
+        return f"{w.bron} geeft geen beschrijving"
+    return ""
+
+
+def oordeel_elders(w: Woning, elders: tuple | None) -> str | None:
+    """Afwijzing op basis van dezelfde woning op een andere site, of None als dat geen reden geeft."""
+    if not elders:
+        return None
+    andere_bron, gemeld, reden, _ = elders
+    if gemeld:
+        return f"al gemeld via {andere_bron}"
+    if not reden:
+        return None
+    if w.bron in ALERTBRONNEN:
+        # de andere site had de volledige advertentie: alles wat over de woning zelf gaat geldt hier ook
+        if not reden.startswith(ALLEEN_DIE_SITE):
+            return f"{reden} (volgens {andere_bron})"
+    elif reden.startswith(VOORWAARDEN):
+        return f"{reden} (volgens {andere_bron})"
+    return None
 
 log = logging.getLogger("woningzoeker")
 
@@ -67,7 +102,9 @@ class Zoeker:
             log.info("Eerste scan: alleen advertenties van de afgelopen %s uur worden gemeld.", s["eerste_scan_max_uren"])
         teller = self.opslag.meta_haal("teller", {"bekeken": 0, "gemeld": 0})
         matches: list[Woning] = []
-        for bron in maak_bronnen(s["bronnen"], MAP / "makelaars.yaml"):
+        bronnen = maak_bronnen(s["bronnen"], MAP / "makelaars.yaml")
+        self._bronnen = {b.naam: b for b in bronnen}  # om een advertentie bij een andere bron na te kunnen lezen
+        for bron in bronnen:
             if bron.interval_minuten:  # zware bron: niet bij elke scan
                 laatst = self.opslag.meta_haal(f"laatst:{bron.naam}")
                 if laatst and datetime.now() - datetime.fromisoformat(laatst) < timedelta(minutes=bron.interval_minuten):
@@ -75,11 +112,18 @@ class Zoeker:
                 if not droog:
                     self.opslag.meta_bewaar(f"laatst:{bron.naam}", datetime.now().isoformat())
             woningen = self._haal(bron, droog)
-            nieuw = [w for w in woningen if not self.opslag.is_gezien(w.sleutel)]
+            # nieuwe advertenties, en eerder geziene waarvan de prijs omlaag ging (dan misschien nu wel binnen budget)
+            nieuw = []
+            for w in woningen:
+                bekijken, vorige_prijs = self.opslag.opnieuw_bekijken(w)
+                if bekijken:
+                    nieuw.append((w, vorige_prijs))
             log.info("%s: %d advertenties, %d nieuw", bron.naam, len(woningen), len(nieuw))
-            for w in nieuw:
+            for w, vorige_prijs in nieuw:
                 teller["bekeken"] += 1
                 reden = self._beoordeel(w, bron, filt, eerste)
+                if not reden and vorige_prijs:
+                    w.labels.insert(0, f"📉 prijs verlaagd van {euro(vorige_prijs)} naar {euro(w.prijs)}")
                 if reden:
                     log.info("  ✗ %-28s €%-5s %s", (w.adres or w.straat)[:28], w.prijs, reden)
                     if not droog:
@@ -96,7 +140,7 @@ class Zoeker:
         limiet = s.get("max_meldingen_per_scan", 15)
         for w in matches[:limiet]:
             if droog:
-                print("\n" + opmaak(w, cfg) + f"\n{w.url}")
+                print("\n" + (opmaak_kort(w, cfg) if w.onzeker else opmaak(w, cfg)) + f"\n{w.url}")
                 continue
             try:
                 self.melder.woning(w, cfg)
@@ -164,21 +208,42 @@ class Zoeker:
         if reden := filt.basis(w):
             return reden
         wijken, buurt = self.locatie.bepaal(w)
-        w.labels = [x for x in w.labels if x.startswith("❔")]  # label van de bron zelf (e-mailalert) bewaren
+        w.labels = []
         if reden := filt.wijk(w, wijken, buurt, definitief=True):
             return reden
         # dezelfde woning al op een andere site gezien? Dan geldt wat daar in de advertentie stond.
-        if elders := self.opslag.elders(w, s.get("dubbel_dagen", 14)):
-            andere_bron, gemeld, reden_elders = elders
-            if gemeld:
-                return f"al gemeld via {andere_bron}"
-            if reden_elders.startswith(VOORWAARDEN):
-                return f"{reden_elders} (volgens {andere_bron})"
+        elders = self.opslag.elders(w, s.get("dubbel_dagen", 14))
+        if reden := oordeel_elders(w, elders):
+            return reden
+        if w.bron in ALERTBRONNEN and elders and (reden := self._lees_elders(w, elders, filt)):
+            return reden
         if reden := filt.tekst(w):
             return reden
         if eerste and w.geplaatst and w.geplaatst < datetime.now() - timedelta(hours=s["eerste_scan_max_uren"]):
             return "eerste scan: te oud"
+        w.onzeker = onzeker_reden(w)  # wordt dan als kort 'zelf checken'-bericht gemeld
         return None
+
+    def _lees_elders(self, w: Woning, elders: tuple, filt: Filter) -> str | None:
+        """Leest de volledige advertentie van dezelfde woning op een andere site en controleert de alert daarmee."""
+        andere_bron, _, _, url = elders
+        bron = self._bronnen.get(andere_bron)
+        if bron is None or not url:
+            return None
+        kopie = Woning(bron=andere_bron, id="controle", url=url, plaats=w.plaats)
+        try:
+            bron.details(self.web, kopie)
+        except Exception as e:
+            log.debug("Advertentie bij %s niet te lezen: %s", andere_bron, e)
+            return None
+        if not kopie.omschrijving:
+            return None
+        w.omschrijving = f"{w.omschrijving} {kopie.omschrijving}"
+        # het aantal slaapkamers uit de volledige advertentie is betrouwbaarder dan 'kamers' uit de alert
+        if kopie.slaapkamers is not None:
+            w.slaapkamers = kopie.slaapkamers
+        w.labels.append(f"✅ voorwaarden gecontroleerd via {andere_bron}")
+        return filt.basis(w)
 
 
 def test_makelaars():

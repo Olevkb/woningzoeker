@@ -142,6 +142,7 @@ tekst:
     - inkomensvoorwaarden|inkomensvereiste|inkomensnorm
     - income requirements?
     - (minimum|gross) (monthly |annual )?income of
+    - (required|minimum) (gross )?(monthly |annual |yearly )?income
     - inkomen van (minimaal|ten minste|minstens)
   garantsteller:
     - garantste
@@ -182,7 +183,7 @@ scan:
   bronnen:
     - makelaars
     - rentola
-    - huurstunt
+    # - huurstunt   # sinds 2 nov een menscheck (Cloudflare): scripts niet meer welkom
     - kamernet
     - 123wonen
     - vesteda

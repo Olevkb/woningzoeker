@@ -117,7 +117,6 @@ class Gmail(Bron):
                 w.soort = "kamer"
             # vaste sleutel per woning, ook als dezelfde woning in een latere mail met een andere link staat
             w.id = f"{re.sub(r'[^a-z0-9]', '', w.straat.lower())}-{w.huisnummer}-{w.postcode}-{w.prijs}"
-            w.labels.append(f"❔ via {naam}-alert: voorwaarden (studenten, garantsteller, inschrijving) niet gecontroleerd")
             uit.append(w)
         return uit
 

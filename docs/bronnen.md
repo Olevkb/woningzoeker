@@ -17,8 +17,8 @@ Inventarisatie van 30 oktober 2026, bijgewerkt na het toevoegen van de nieuwe br
 | Funda | grootste portaal, veel makelaars | ✉️ |
 | Pararius | vrije sector, vrijwel alle verhuurmakelaars | ✉️ |
 | Huurwoningen.nl | makelaars en particulieren | ✉️ |
-| Rentola | verzamelt van veel makelaars | ✅ |
-| Huurstunt | verzamelsite | ✅ |
+| Rentola | verzamelt van veel makelaars | ✅ maar sinds begin november meestal zonder beschrijving → zulke woningen komen als ❔ ZELF CHECKEN |
+| Huurstunt | verzamelsite | ⛔ sinds 2 november een menscheck; verwijderd |
 | Kamernet | appartementen (ook kamers, die filteren we weg) | ✅ |
 | 123Wonen | eigen verhuurmakelaar | ✅ |
 | Vastgoed Nederland | aangesloten makelaars | ✅ |

@@ -35,6 +35,10 @@ class Telegram:
 
     def woning(self, w: Woning, cfg: dict):
         knoppen = knoppen_voor(w)
+        if w.onzeker:  # voorwaarden niet te controleren: kort bericht, zonder foto, zodat het opvalt
+            self._stuur("sendMessage", text=opmaak_kort(w, cfg), parse_mode="HTML", reply_markup=knoppen,
+                        disable_web_page_preview=True)
+            return
         tekst = opmaak(w, cfg)
         if w.foto:
             try:
@@ -66,6 +70,23 @@ def knoppen_voor(w: Woning) -> dict:
         zoek = f'"{w.adres or w.straat}" {w.plaats or "Amsterdam"} huur {zonder}'
         knoppen.append([{"text": "🔎 Zoek de makelaar (gratis reageren)", "url": f"https://www.google.com/search?q={quote_plus(zoek)}"}])
     return {"inline_keyboard": knoppen}
+
+
+def opmaak_kort(w: Woning, cfg: dict) -> str:
+    """Kort bericht voor een woning waarvan de voorwaarden niet te controleren waren."""
+    e = html.escape
+    plek = " · ".join(x for x in (w.wijk, w.buurt if w.buurt != w.wijk else "") if x)
+    maten = " · ".join(x for x in (
+        f"{w.slaapkamers} slaapkamers" if w.slaapkamers else f"{w.kamers} kamers" if w.kamers else "",
+        f"{w.m2} m²" if w.m2 else "",
+    ) if x)
+    regels = [
+        f"❔ <b>ZELF CHECKEN</b>: studenten/delers/garantsteller niet te controleren ({e(w.onzeker)})",
+        f"🏠 <b>{e(w.adres or w.straat or 'Woning')}</b>" + (f" · {e(plek)}" if plek else ""),
+        f"💶 {euro(w.prijs)}" + (f" · {maten}" if maten else "") + f" · via {e(w.bron)}",
+    ]
+    regels.extend(e(label) for label in w.labels)
+    return "\n".join(regels)
 
 
 def euro(bedrag: float) -> str:

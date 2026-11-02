@@ -32,6 +32,7 @@ class Woning:
     inschrijving: bool | None = None
     max_personen: int | None = None
     status: str = ""  # bv. 'gereserveerd' of 'verhuurd' als de advertentiepagina dat zegt
+    onzeker: str = ""  # waarom de voorwaarden (studenten, delers, garantsteller) niet te controleren waren
     hints: list[str] = field(default_factory=list)  # losse tekst waar het adres waarschijnlijk in staat
     # ingevuld tijdens het filteren
     wijk: str = ""

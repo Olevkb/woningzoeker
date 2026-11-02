@@ -78,3 +78,13 @@ De alert bevat meestal alleen adres, prijs, m² en kamers. Eisen 1–4 controlee
 
 
 Bronnen: [Rijksoverheid huurtoeslag 2026](https://www.rijksoverheid.nl/actueel/nieuws/2025/11/24/meer-mensen-in-aanmerking-huurtoeslag), [Belastingdienst](https://www.belastingdienst.nl/wps/wcm/connect/nl/huurtoeslag/content/huurtoeslag-verandert-vanaf-2026), [Huisvestingsverordening Amsterdam](https://lokaleregelgeving.overheid.nl/CVDR706038/), [Ymere over middenhuur](https://www.ymere.nl/ik-zoek/middenhuur-en-vrije-sector/toewijzingseisen-middenhuur-en-vrije-sector/).
+
+## 9. Woningen waarvan de voorwaarden niet te controleren zijn (besloten 2 november)
+
+Bij e-mailalerts van Pararius/Funda en bij Rentola-advertenties zonder beschrijving staat niet of studenten, delers of een garantsteller welkom zijn.
+
+1. Staat dezelfde woning op een andere site die de zoeker al zag, dan geldt wat die site wist (bv. te duur bij 3 slaapkamers, "no students").
+2. Staat hij daar maar is hij nog niet afgewezen, dan leest de zoeker daar de volledige advertentie en controleert hij álle eisen ("✅ voorwaarden gecontroleerd via …").
+3. Lukt beide niet, dan komt de woning als kort bericht met **❔ ZELF CHECKEN** bovenaan, zonder foto.
+
+Verder: gaat de prijs van een eerder afgewezen woning omlaag, dan wordt hij opnieuw bekeken en gemeld met "📉 prijs verlaagd".

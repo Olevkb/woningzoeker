@@ -142,6 +142,29 @@ class Melding(unittest.TestCase):
         self.assertEqual(len(knoppen_voor(hausing)["inline_keyboard"]), 1)  # bij de makelaar zelf: geen extra knop
 
 
+class Onzeker(unittest.TestCase):
+    def test_wanneer_zelf_checken(self):
+        from woningzoeker.__main__ import onzeker_reden
+        from woningzoeker.model import Woning
+        from woningzoeker.telegram import opmaak_kort
+
+        lang = "Ruim appartement met twee slaapkamers. " * 20
+        alert = Woning(bron="Pararius", id="1", url="x", straat="Stadionweg", prijs=3500, omschrijving=lang)
+        self.assertIn("samenvatting", onzeker_reden(alert))
+        alert.labels.append("✅ voorwaarden gecontroleerd via Hausing")  # wel gecontroleerd via een andere site
+        self.assertEqual(onzeker_reden(alert), "")
+        rentola = Woning(bron="Rentola", id="2", url="x", straat="Kerkstraat", prijs=2600, omschrijving="")
+        self.assertIn("geen beschrijving", onzeker_reden(rentola))
+        makelaar = Woning(bron="Hausing", id="3", url="x", straat="Kerkstraat", prijs=2600, omschrijving=lang)
+        self.assertEqual(onzeker_reden(makelaar), "")
+
+        rentola.onzeker, rentola.wijk, rentola.slaapkamers, rentola.m2 = onzeker_reden(rentola), "Grachtengordel-Zuid", 2, 72
+        tekst = opmaak_kort(rentola, {"huurtoeslag": {"per_maand": 525}})
+        self.assertTrue(tekst.startswith("❔ <b>ZELF CHECKEN</b>"))
+        self.assertIn("Kerkstraat", tekst)
+        self.assertIn("€2.600 · 2 slaapkamers · 72 m² · via Rentola", tekst)
+
+
 class EmailAlert(unittest.TestCase):
     def test_pararius_alert(self):
         html = """<html><body><table>
@@ -167,7 +190,7 @@ class EmailAlert(unittest.TestCase):
         self.assertEqual((w.straat, w.huisnummer), ("Weesperzijde", "112"))
         self.assertEqual(w.foto, "https://casco.pararius.nl/foto.jpg")
         self.assertIn("€ 2.300 per maand", w.omschrijving)  # de tekst uit de mail gaat door de tekstfilters
-        self.assertTrue(w.labels[0].startswith("❔ via Pararius-alert"))
+        self.assertEqual(w.labels, [])  # onzekerheid wordt bij het melden bepaald (kort ZELF CHECKEN-bericht)
         kamer = next(x for x in woningen if "kinkerstraat" in x.url)
         self.assertEqual(kamer.soort, "kamer")
 

@@ -272,10 +272,42 @@ class Elders(unittest.TestCase):
             makelaar = woning(bron="Hausing", id="a", straat="Weesperzijde", huisnummer="112-2", prijs=2300)
             opslag.markeer(makelaar, False, "tekst: 'geen studenten'")
             alert = woning(bron="Pararius", id="b", straat="Weesperzijde", huisnummer="112", prijs=2350)
-            self.assertEqual(opslag.elders(alert, 14), ("Hausing", False, "tekst: 'geen studenten'"))
+            self.assertEqual(opslag.elders(alert, 14)[:3], ("Hausing", False, "tekst: 'geen studenten'"))
             anders = woning(bron="Funda", id="c", straat="Weesperzijde", huisnummer="40", prijs=2350)
             self.assertIsNone(opslag.elders(anders, 14))
             opslag.db.close()
+
+    def test_prijsverlaging_wordt_opnieuw_bekeken(self):
+        """Foeliedwarsstraat 2 (Hausing): eerst €2.750 te duur, op 2 november €2.600."""
+        with tempfile.TemporaryDirectory() as tmp:
+            opslag = Opslag(Path(tmp) / "t.db")
+            w = woning(bron="Hausing", id="foelie", straat="Foeliedwarsstraat", prijs=2750)
+            self.assertEqual(opslag.opnieuw_bekijken(w), (True, None))  # nieuw
+            opslag.markeer(w, False, "te duur")
+            self.assertEqual(opslag.opnieuw_bekijken(w), (False, None))  # zelfde prijs: niet opnieuw
+            w.prijs = 2600
+            self.assertEqual(opslag.opnieuw_bekijken(w), (True, 2750))  # goedkoper: opnieuw, met de oude prijs
+            opslag.markeer(w, True)
+            w.prijs = 2700
+            self.assertEqual(opslag.opnieuw_bekijken(w), (False, None))  # duurder: niet opnieuw
+            opslag.db.close()
+
+    def test_alert_neemt_afwijzing_van_elders_over(self):
+        """Stadionweg, 2 november: Pararius zei '5 kamers', Rentola wist dat het 3 slaapkamers waren (te duur)."""
+        from woningzoeker.__main__ import oordeel_elders
+
+        alert = woning(bron="Pararius", id="p", straat="Stadionweg", prijs=3500, kamers=5, slaapkamers=None)
+        rentola = ("Rentola", False, "te duur (€3500 kaal, max €3250 bij 3 slaapkamers)", "https://rentola.nl/x")
+        self.assertIn("te duur", oordeel_elders(alert, rentola))
+        self.assertIn("volgens Rentola", oordeel_elders(alert, rentola))
+        # wat alleen over die andere site zegt dat iets ontbrak, telt niet
+        self.assertIsNone(oordeel_elders(alert, ("Rentola", False, "wijk onbekend", "x")))
+        self.assertIsNone(oordeel_elders(alert, ("Rentola", False, "aantal slaapkamers onbekend", "x")))
+        # tussen twee gewone sites blijft het als voorheen: alleen afwijzingen over de voorwaarden
+        hausing = woning(bron="Hausing", id="h", straat="Stadionweg", prijs=3500)
+        self.assertIsNone(oordeel_elders(hausing, rentola))
+        self.assertIsNotNone(oordeel_elders(hausing, ("Rentola", False, "tekst: 'no students'", "x")))
+        self.assertEqual(oordeel_elders(alert, ("Rentola", True, "", "x")), "al gemeld via Rentola")
 
 
 if __name__ == "__main__":

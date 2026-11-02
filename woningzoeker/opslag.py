@@ -34,9 +34,9 @@ class Opslag:
             """
         )
         kolommen = {r[1] for r in self.db.execute("PRAGMA table_info(gezien)")}
-        for kolom in ("adres", "bron"):  # toegevoegd na de eerste versie
+        for kolom, soort in (("adres", "TEXT"), ("bron", "TEXT"), ("prijs", "INTEGER")):  # toegevoegd na de eerste versie
             if kolom not in kolommen:
-                self.db.execute(f"ALTER TABLE gezien ADD COLUMN {kolom} TEXT")
+                self.db.execute(f"ALTER TABLE gezien ADD COLUMN {kolom} {soort}")
         self.db.execute("CREATE INDEX IF NOT EXISTS gezien_adres ON gezien(adres)")
         self.db.commit()
 
@@ -46,20 +46,33 @@ class Opslag:
     def is_gezien(self, sleutel: str) -> bool:
         return self.db.execute("SELECT 1 FROM gezien WHERE sleutel = ?", (sleutel,)).fetchone() is not None
 
-    def elders(self, w: Woning, dagen: int) -> tuple[str, bool, str] | None:
-        """Dezelfde woning op een andere site (zelfde straat + prijs, of zelfde adres): (bron, gemeld, reden)."""
+    def opnieuw_bekijken(self, w: Woning) -> tuple[bool, int | None]:
+        """(moet bekeken worden, vorige prijs). Nieuw → ja; prijs omlaag → ja, met de oude prijs erbij."""
+        rij = self.db.execute("SELECT gemeld, prijs FROM gezien WHERE sleutel = ?", (w.sleutel,)).fetchone()
+        if rij is None:
+            return True, None
+        gemeld, vorige = rij
+        if vorige is None:  # opgeslagen voordat prijzen bewaard werden: eenmalig opnieuw, tenzij al gemeld
+            return not gemeld, None
+        if w.prijs and w.prijs < vorige:
+            return True, vorige
+        return False, None
+
+    def elders(self, w: Woning, dagen: int) -> tuple[str, bool, str, str] | None:
+        """Dezelfde woning op een andere site (zelfde straat + prijs, of zelfde adres): (bron, gemeld, reden, url)."""
         grens = (datetime.now() - timedelta(days=dagen)).isoformat()
         rij = self.db.execute(
-            "SELECT bron, gemeld, reden FROM gezien WHERE (dubbel = ? OR (adres != '' AND adres = ?)) "
+            "SELECT bron, gemeld, reden, url FROM gezien WHERE (dubbel = ? OR (adres != '' AND adres = ?)) "
             "AND bron != ? AND tijd > ? ORDER BY gemeld DESC, tijd DESC LIMIT 1",
             (w.dubbel_sleutel, w.adres_sleutel, w.bron, grens),
         ).fetchone()
-        return (rij[0], bool(rij[1]), rij[2] or "") if rij else None
+        return (rij[0], bool(rij[1]), rij[2] or "", rij[3] or "") if rij else None
 
     def markeer(self, w: Woning, gemeld: bool, reden: str = ""):
         self.db.execute(
-            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, adres, bron, gemeld, reden, url, tijd) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (w.sleutel, w.dubbel_sleutel, w.adres_sleutel, w.bron, int(gemeld), reden, w.url, datetime.now().isoformat()),
+            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, adres, bron, gemeld, reden, url, tijd, prijs) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (w.sleutel, w.dubbel_sleutel, w.adres_sleutel, w.bron, int(gemeld), reden, w.url, datetime.now().isoformat(), w.prijs),
         )
         self.db.commit()
 
