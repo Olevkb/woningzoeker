@@ -29,7 +29,7 @@ from .telegram import Telegram, euro, opmaak, opmaak_kort
 from .web import Geweigerd, Web
 
 MAP = Path(__file__).resolve().parent.parent
-FOUTEN_VOOR_WAARSCHUWING = 6  # zoveel mislukte scans op rij van één site = melding sturen
+UREN_VOOR_WAARSCHUWING = 2  # zo lang onafgebroken mislukt = melding; korte storingen (time-outs, onderhoud) niet
 # afwijzingen die over de woning zelf gaan en dus ook gelden als dezelfde woning op een andere site staat
 VOORWAARDEN = ("tekst:", "inschrijven", "max ", "short stay")
 # afwijzingen die alleen zeggen dat díe site iets niet vermeldde; die gelden niet voor dezelfde woning elders
@@ -181,16 +181,26 @@ class Zoeker:
             woningen, probleem = [], f"{type(e).__name__}: {e}"
         fouten = self.opslag.meta_haal("fouten", {})
         if not probleem:
-            if fouten.pop(bron.naam, None) is not None and not droog:
+            vorige = fouten.pop(bron.naam, None)
+            if vorige is not None and not droog:
                 self.opslag.meta_bewaar("fouten", fouten)
+                gemeld = vorige.get("gemeld") if isinstance(vorige, dict) else vorige >= 6  # oude opslag: teller
+                if gemeld and self.melder:
+                    self.melder.tekst(f"✅ {bron.naam} werkt weer.")
             return woningen
         log.warning("%s: %s", bron.naam, probleem)
         if droog:
             return woningen
-        fouten[bron.naam] = fouten.get(bron.naam, 0) + 1
+        fout = fouten.get(bron.naam)
+        if not isinstance(fout, dict):  # nieuwe storing, of nog de oude opslag (alleen een teller; vanaf 6 was er al gemeld)
+            fout = {"sinds": datetime.now().isoformat(), "gemeld": isinstance(fout, int) and fout >= 6}
+        if not fout["gemeld"] and datetime.now() - datetime.fromisoformat(fout["sinds"]) >= timedelta(hours=UREN_VOOR_WAARSCHUWING):
+            if self.melder:
+                self.melder.tekst(f"⚠️ {bron.naam} werkt al {UREN_VOOR_WAARSCHUWING} uur niet: {probleem[:150]}\n"
+                                  "De andere sites draaien gewoon door. Je hoort het als deze weer werkt.")
+            fout["gemeld"] = True
+        fouten[bron.naam] = fout
         self.opslag.meta_bewaar("fouten", fouten)
-        if fouten[bron.naam] == FOUTEN_VOOR_WAARSCHUWING and self.melder:
-            self.melder.tekst(f"⚠️ {bron.naam} werkt al {FOUTEN_VOOR_WAARSCHUWING} scans niet: {probleem}")
         return woningen
 
     def _beoordeel(self, w: Woning, bron: Bron, filt: Filter, eerste: bool) -> str | None:

@@ -322,5 +322,123 @@ class Postcode(unittest.TestCase):
         self.assertTrue(zelfde_straat("", "Keizersgracht"))  # straat onbekend: postcode is alles wat we hebben
 
 
+
+class Bronstatus(unittest.TestCase):
+    class Web:
+        def __init__(self, html):
+            self._html = html
+
+        def html(self, url):
+            return self._html
+
+    def test_niets_in_amsterdam_is_geen_storing(self):
+        # Heimstaden (3 nov): de hele lijst stond in andere plaatsen; dat is geen kapotte site
+        from woningzoeker.bronnen.makelaar import Makelaar
+        m = Makelaar(naam="Heimstaden", url="https://heimstaden.com/nl/huurwoningen/", link=r"(?i)^/nl/huurwoningen/amsterdam-")
+        lijst = '<a href="/nl/huurwoningen/ALMERE-98m2-f265d2aa/">Almere</a><a href="/nl/huurwoningen/Breda-85m2-5bafa1ff/">Breda</a>'
+        self.assertEqual(m.zoek(self.Web(lijst)), [])
+        self.assertTrue(m.gezond([]))
+        m.zoek(self.Web('<a href="/nl/contact/">Contact</a>'))
+        self.assertFalse(m.gezond([]))  # helemaal geen advertenties meer: dan is de site echt veranderd
+
+    def test_waarschuwing_pas_na_twee_uur_en_bericht_als_het_weer_werkt(self):
+        import tempfile
+        from datetime import timedelta
+        from pathlib import Path
+        from woningzoeker.__main__ import Zoeker
+        from woningzoeker.opslag import Opslag
+
+        class Melder:
+            berichten = []
+
+            def tekst(self, t):
+                self.berichten.append(t)
+
+        class Bron:
+            naam, werkt = "Koops", False
+
+            def zoek(self, web):
+                if not self.werkt:
+                    raise TimeoutError("Read timed out")
+                return []
+
+            def gezond(self, woningen):
+                return True
+
+        z = Zoeker.__new__(Zoeker)
+        z.opslag, z.melder, z.web = Opslag(Path(tempfile.mkdtemp()) / "t.db"), Melder(), None
+        bron = Bron()
+        z._haal(bron, droog=False)
+        z._haal(bron, droog=False)
+        self.assertEqual(z.melder.berichten, [])  # korte storing: niets melden
+        fouten = z.opslag.meta_haal("fouten")
+        fouten["Koops"]["sinds"] = (datetime.now() - timedelta(hours=2, minutes=1)).isoformat()
+        z.opslag.meta_bewaar("fouten", fouten)
+        z._haal(bron, droog=False)
+        z._haal(bron, droog=False)
+        self.assertEqual(len(z.melder.berichten), 1)  # één keer waarschuwen, niet bij elke scan
+        self.assertIn("werkt al 2 uur niet", z.melder.berichten[0])
+        bron.werkt = True
+        z._haal(bron, droog=False)
+        self.assertEqual(z.melder.berichten[-1], "✅ Koops werkt weer.")
+
+    def test_oude_teller_na_eerdere_waarschuwing_niet_opnieuw_melden(self):
+        import tempfile
+        from datetime import timedelta
+        from pathlib import Path
+        from woningzoeker.__main__ import Zoeker
+        from woningzoeker.opslag import Opslag
+
+        class Melder:
+            berichten = []
+
+            def tekst(self, t):
+                self.berichten.append(t)
+
+        class Bron:
+            naam = "Van der Linden"
+
+            def zoek(self, web):
+                raise ConnectionError("SSLError")
+
+        z = Zoeker.__new__(Zoeker)
+        z.opslag, z.melder, z.web = Opslag(Path(tempfile.mkdtemp()) / "t.db"), Melder(), None
+        z.opslag.meta_bewaar("fouten", {"Van der Linden": 238})  # opslag van vóór 3 november
+        z._haal(Bron(), droog=False)
+        fouten = z.opslag.meta_haal("fouten")
+        fouten["Van der Linden"]["sinds"] = (datetime.now() - timedelta(hours=5)).isoformat()
+        z.opslag.meta_bewaar("fouten", fouten)
+        z._haal(Bron(), droog=False)
+        self.assertEqual(z.melder.berichten, [])
+
+    def test_herstel_na_waarschuwing_uit_oude_opslag(self):
+        import tempfile
+        from pathlib import Path
+        from woningzoeker.__main__ import Zoeker
+        from woningzoeker.opslag import Opslag
+
+        class Melder:
+            berichten = []
+
+            def tekst(self, t):
+                self.berichten.append(t)
+
+        class Bron:
+            naam = "Heimstaden"
+
+            def zoek(self, web):
+                return []
+
+            def gezond(self, woningen):
+                return True
+
+        z = Zoeker.__new__(Zoeker)
+        z.opslag, z.melder, z.web = Opslag(Path(tempfile.mkdtemp()) / "t.db"), Melder(), None
+        z.opslag.meta_bewaar("fouten", {"Heimstaden": 29, "Koops": 2})  # Heimstaden kreeg al een waarschuwing
+        z._haal(Bron(), droog=False)
+        self.assertEqual(z.melder.berichten, ["✅ Heimstaden werkt weer."])
+        self.assertEqual(z.opslag.meta_haal("fouten"), {"Koops": 2})
+
+
 if __name__ == "__main__":
     unittest.main()

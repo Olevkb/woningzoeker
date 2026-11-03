@@ -24,26 +24,31 @@ class Makelaar(Bron):
         self.naam = naam
         self.url = url
         self.link = re.compile(link)
+        # zelfde patroon voor elke plaats: om te zien of de site nog werkt als er even niets in Amsterdam is
+        self.link_elke_plaats = re.compile(re.sub(r"(?i)amsterdam", "[^/]+", link))
         self.query = re.compile(query) if query else None  # voor sites waar alleen het ?-deel advertenties onderscheidt
         self.plaats = plaats  # vaste plaatsnaam als de lijst al op die plaats gefilterd is
         self.alleen = re.compile(alleen, re.I) if alleen else None
         self.aantal_links = 0
+        self.aantal_elders = 0  # advertentielinks van andere plaatsen
 
     def gezond(self, woningen) -> bool:
-        # alles verhuurd of buiten Amsterdam is normaal; géén advertentielinks betekent dat de site veranderd is
-        return self.aantal_links > 0
+        # alles verhuurd of niets in Amsterdam is normaal; géén advertentielinks (ook niet van andere plaatsen) = site veranderd
+        return self.aantal_links > 0 or self.aantal_elders > 0
 
     def zoek(self, web: Web) -> list[Woning]:
         soup = BeautifulSoup(web.html(self.url), "html.parser")
-        links = {}
+        links, elders = {}, set()
         for a in soup.find_all("a", href=True):
             url = urljoin(self.url, a["href"]).split("#")[0]
             p = urlparse(url)
-            if self.query and not self.query.search(p.query):
+            if (self.query and not self.query.search(p.query)) or p.netloc != urlparse(self.url).netloc:
                 continue
-            if self.link.search(p.path) and p.netloc == urlparse(self.url).netloc:
+            if self.link.search(p.path):
                 links.setdefault(url, a)
-        self.aantal_links = len(links)
+            elif self.link_elke_plaats.search(p.path):
+                elders.add(p.path)
+        self.aantal_links, self.aantal_elders = len(links), len(elders)
         uit = []
         for url, a in links.items():
             kaart = _kaart(a, self.link)

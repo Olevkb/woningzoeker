@@ -58,6 +58,8 @@ Inventarisatie van 30 oktober 2026, bijgewerkt op 2 november 2026. Elke bron is 
 
 **✅ Draait (20):** Hausing, Van der Linden, Expat Housing, Expat Rentals, Verhuurtbeter, Absolute Housing, Klok Real Estate, Smit & Heinen, Rotsvast, Househunting, Eefje Voogd, JLG Real Estate, Van Huis Uit Makelaars, SEM Makelaars, HousingNet, Homecrew, Interhouse (alleen uitgelichte woningen), Damstad, 27 House Real Estate, Gapph (tijdelijke verhuur).
 
+**Storingen (3 november):** Van der Linden is sinds 2 november voor iedereen onbereikbaar (de site toont een certificaat voor een ander adres); hij blijft in de lijst en doet vanzelf weer mee als de site terug is. Heimstaden heeft op dit moment niets in Amsterdam (hun hele lijst staat in andere plaatsen); dat telt niet meer als storing. De zoeker waarschuwt pas als een site 2 uur onafgebroken niet werkt, en meldt het als hij weer werkt.
+
 **Bij het toevoegen bleek maatwerk nodig:** zie hierboven.
 
 **✅ Maatwerk, draait sinds 31 oktober (2):** vb&t Verhuurmakelaars (via hun API, alle pagina's één keer per uur), Friedmann Housing.
