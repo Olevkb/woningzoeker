@@ -47,6 +47,7 @@ Waarom het middelste geval niet wegfilteren: veel verhuurders noemen alleen hun 
 - 🎓 jongeren- of campuscontract (pluspunt voor studenten)
 - 🛋 gemeubileerd (jullie liever niet)
 - 🏷 middenhuur (€932,93–€1.228,07): je hebt een huisvestingsvergunning van de gemeente nodig
+- 🚩 erg lage huur (onder €932,93): waarschijnlijk sociale huur of een kamer; wordt wel gemeld (besluit 4 nov)
 - 📅 pas over meer dan 2 maanden beschikbaar
 - 👥 alleen betaalbaar met een extra huisgenoot
 - 🚩 waarborgsom hoger dan 2 maanden kale huur, bemiddelingskosten voor de huurder, onderhuur, of signalen van oplichting

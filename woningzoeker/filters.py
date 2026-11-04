@@ -162,6 +162,8 @@ class Filter:
             labels.append(f"👥 alleen betaalbaar met {n} personen (verhuurder heeft dan een omzettingsvergunning nodig)")
         if (w.prijs_soort in (None, "kaal") and MIDDENHUUR[0] <= w.prijs <= MIDDENHUUR[1]) or re.search(r"middenhuur|middeldure huur|mid-?rent", tekst, re.I):
             labels.append("🏷 middenhuur: je hebt een huisvestingsvergunning van de gemeente nodig")
+        if w.prijs < MIDDENHUUR[0]:
+            labels.append("🚩 erg lage huur: waarschijnlijk sociale huur of een kamer, check of de advertentie klopt")
         if w.beschikbaar and w.beschikbaar - datetime.now() > LATER_BESCHIKBAAR:
             labels.append(f"📅 pas beschikbaar per {w.beschikbaar:%d-%m-%Y}")
         if (borg := t.borg_maanden(tekst, w.prijs)) and borg > 2.05:

@@ -166,6 +166,17 @@ class Tekst(unittest.TestCase):
         for verwacht in ("⏳ tijdelijk contract (24 maanden)", "🎓 jongeren-/campuscontract"):
             self.assertTrue(any(l.startswith(verwacht) for l in labels), (verwacht, labels))
 
+    def test_lage_huur_wordt_gemeld_met_een_vlag(self):
+        # Saffierstraat en Granaatstraat via Rentola (4 nov): niet weglaten, wel opvallen
+        for prijs in (932, 764):
+            reden, labels = self.check("Mooi appartement met twee slaapkamers.", prijs=prijs)
+            self.assertIsNone(reden)
+            self.assertTrue(any(l.startswith("🚩 erg lage huur") for l in labels), labels)
+        _, labels = self.check("Mooi appartement met twee slaapkamers.", prijs=933)
+        self.assertFalse(any(l.startswith("🚩 erg lage huur") for l in labels), labels)
+        self.assertTrue(any(l.startswith("🏷 middenhuur") for l in labels), labels)
+        self.assertEqual(self.check("Mooi appartement met twee slaapkamers.", prijs=2400)[1], [])
+
     def test_gemeubileerd(self):
         self.assertEqual(self.check("Overeenkomst Onbepaalde tijd Te huur Oplevering Gemeubileerd")[0], "gemeubileerd")
         self.assertEqual(self.check("Fully furnished apartment")[0], "gemeubileerd")
