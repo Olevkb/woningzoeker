@@ -188,9 +188,10 @@ scan:
   # dan zijn de makelaars al bekeken en kan een alert gekoppeld worden aan de advertentie van de makelaar.
   bronnen:
     - makelaars
+    # kamernet vóór rentola: Rentola neemt van Kamernet over, maar zonder beschrijving en zonder soort verhuurder
+    - kamernet
     - rentola
     # - huurstunt   # sinds 2 nov een menscheck (Cloudflare): scripts niet meer welkom
-    - kamernet
     - 123wonen
     - vesteda
     - vbt

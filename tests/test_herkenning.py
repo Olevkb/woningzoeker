@@ -141,21 +141,67 @@ class Maatwerkbronnen(unittest.TestCase):
 
 
 class Melding(unittest.TestCase):
-    def test_zoek_de_makelaar_alleen_bij_betaalde_verzamelsites(self):
-        from urllib.parse import parse_qs, urlparse
+    def test_zoekknoppen_alleen_bij_betaalde_verzamelsites(self):
+        from urllib.parse import unquote
 
         from woningzoeker.model import Woning
         from woningzoeker.telegram import knoppen_voor
 
-        rentola = Woning(bron="Rentola", id="1", url="https://rentola.nl/listings/x", straat="Kerkstraat", huisnummer="256-1", plaats="Amsterdam")
+        rentola = Woning(bron="Rentola", id="1", url="https://rentola.nl/listings/x", straat="Ferdinand Bolstraat", huisnummer="13-1",
+                         plaats="Amsterdam", prijs=2995, wijk="Oude Pijp", buurten=[("Oude Pijp", "Frans Halsbuurt")])
         knoppen = knoppen_voor(rentola)["inline_keyboard"]
         self.assertEqual(len(knoppen), 2)
-        zoek = parse_qs(urlparse(knoppen[1][0]["url"]).query)["q"][0]
-        self.assertIn('"Kerkstraat 256-1" Amsterdam huur', zoek)
-        self.assertIn("-site:rentola.nl", zoek)
+        pararius, funda = knoppen[1]
+        self.assertEqual(pararius["url"], "https://www.pararius.nl/huurwoningen/amsterdam/buurt-oude-pijp/2845-3145")
+        self.assertIn('["amsterdam/straat-ferdinand-bolstraat"]', unquote(funda["url"]))
 
-        hausing = Woning(bron="Hausing", id="2", url="https://hausing.com/for-rent/x", straat="Kerkstraat", plaats="Amsterdam")
+        hausing = Woning(bron="Hausing", id="2", url="https://hausing.com/for-rent/x", straat="Kerkstraat", plaats="Amsterdam", prijs=2000)
         self.assertEqual(len(knoppen_voor(hausing)["inline_keyboard"]), 1)  # bij de makelaar zelf: geen extra knop
+
+    def test_zoeklinks_zoals_pararius_en_funda_ze_schrijven(self):
+        from urllib.parse import unquote
+
+        from woningzoeker.model import Woning
+        from woningzoeker.telegram import funda_zoeken, pararius_zoeken
+
+        def woning(**kw):
+            return Woning(bron="Rentola", id="1", url="x", prijs=2600, **kw)
+
+        for wijk, deel in [("Nieuwmarkt/Lastage", "buurt-nieuwmarkt-lastage"), ("Prinses Irenebuurt e.o.", "buurt-prinses-irenebuurt-e-o"),
+                           ("IJselbuurt", "buurt-ijselbuurt"), ("Burgwallen-Nieuwe Zijde", "buurt-burgwallen-nieuwe-zijde")]:
+            self.assertEqual(pararius_zoeken(woning(wijk=wijk)), f"https://www.pararius.nl/huurwoningen/amsterdam/{deel}/2450-2750")
+        # straat zonder huisnummer door meerdere wijken: de buurt kan niet kloppen, dus heel Amsterdam
+        lang = woning(wijk="Oude Pijp", buurten=[("Oude Pijp", "a"), ("Nieuwe Pijp", "b")])
+        self.assertEqual(pararius_zoeken(lang), "https://www.pararius.nl/huurwoningen/amsterdam/2450-2750")
+
+        for straat, deel in [("1e Jan van der Heijdenstraat", "eerste-jan-van-der-heijdenstraat"), ("Pr. Hendrikkade", "prins-hendrikkade"),
+                             ("St. Antoniesbreestraat", "sint-antoniesbreestraat"), ("Prof. R. Casimirstraat", "prof-r-casimirstraat"),
+                             ("Charlotte Brontéstraat", "charlotte-brontestraat")]:
+            self.assertIn(f'"amsterdam/straat-{deel}"', unquote(funda_zoeken(woning(straat=straat))))
+
+    def test_eerlijk_over_de_route_per_soort_verhuurder(self):
+        from woningzoeker.model import Woning
+        from woningzoeker.telegram import knoppen_voor, route_regel
+
+        def kamernet(**kw):
+            return Woning(bron="Kamernet", id="1", url="x", straat="Lekstraat", prijs=2650, **kw)
+
+        self.assertIn("particuliere verhuurder", route_regel(kamernet(verhuurder="particulier")))
+        self.assertIn("alleen op Kamernet", route_regel(kamernet(verhuurder="particulier")))
+        self.assertIn("makelaar", route_regel(kamernet(verhuurder="makelaar")))
+        self.assertIn("Cozy Lofts", route_regel(kamernet(verhuurder="Cozy Lofts")))
+
+        # de verhuurder betaalt zelf voor gratis reacties: dan hoeft er niets gezocht te worden
+        gratis = kamernet(gratis_reageren=True)
+        self.assertIn("gratis reageren via Kamernet", route_regel(gratis))
+        self.assertEqual(len(knoppen_voor(gratis)["inline_keyboard"]), 1)
+
+        # al gevonden bij een gratis site: directe knop bovenaan
+        elders = kamernet(gratis_bij=("Hausing", "https://hausing.com/for-rent/x"))
+        self.assertIn("Hausing", route_regel(elders))
+        self.assertEqual(knoppen_voor(elders)["inline_keyboard"][0][0]["url"], "https://hausing.com/for-rent/x")
+
+        self.assertEqual(route_regel(Woning(bron="Hausing", id="2", url="x")), "")
 
 
 class Onzeker(unittest.TestCase):
@@ -438,6 +484,94 @@ class Bronstatus(unittest.TestCase):
         z._haal(Bron(), droog=False)
         self.assertEqual(z.melder.berichten, ["✅ Heimstaden werkt weer."])
         self.assertEqual(z.opslag.meta_haal("fouten"), {"Koops": 2})
+
+
+
+class ZelfdeWoning(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+
+        from woningzoeker.opslag import Opslag
+
+        self.opslag = Opslag(Path(tempfile.mkdtemp()) / "t.db")
+
+    @staticmethod
+    def woning(bron, **kw):
+        from woningzoeker.model import Woning
+
+        return Woning(bron=bron, id=f"{bron}1", url=f"https://{bron}.nl/x", straat="Lekstraat", prijs=2650, **kw)
+
+    def test_zelfde_straat_en_prijs_maar_andere_postcode_is_een_andere_woning(self):
+        # echt geval 4 nov: Lekstraat 7 (Kamernet, 1079 EK) en Lekstraat 71-3 (Pararius, PCW Housing, 1079 EM)
+        kamernet = self.woning("Kamernet", huisnummer="7", postcode="1079EK")
+        pararius = self.woning("Pararius", postcode="1079EM")
+        self.assertFalse(kamernet.zelfde_woning(pararius))
+        self.opslag.markeer(pararius, False, "tekst: 'gemeubileerd'")
+        self.assertIsNone(self.opslag.elders(kamernet, 14))
+        self.assertIsNone(self.opslag.gratis_bij(kamernet, 14, ("Kamernet",)))
+
+    def test_postcode_onbekend_telt_nog_als_dezelfde_woning(self):
+        rentola = self.woning("Rentola", postcode="1079EK")
+        mail = self.woning("Pararius")
+        self.assertTrue(rentola.zelfde_woning(mail))
+        self.opslag.markeer(mail, False, "")
+        self.assertEqual(self.opslag.elders(rentola, 14)[0], "Pararius")
+
+    def test_gratis_site_wordt_gevonden_en_betaalde_niet(self):
+        kamernet = self.woning("Kamernet", postcode="1079EK")
+        self.opslag.markeer(self.woning("Rentola", postcode="1079EK"), False, "")
+        self.assertIsNone(self.opslag.gratis_bij(kamernet, 14, ("Kamernet", "Rentola")))
+        self.opslag.markeer(self.woning("Hausing", postcode="1079EK"), False, "")
+        self.assertEqual(self.opslag.gratis_bij(kamernet, 14, ("Kamernet", "Rentola")), ("Hausing", "https://Hausing.nl/x"))
+
+    def test_eerder_via_betaalde_site_gemeld_krijgt_gratis_route_nagestuurd(self):
+        import yaml
+        from pathlib import Path
+
+        from woningzoeker.__main__ import Zoeker
+        from woningzoeker.filters import Filter
+
+        cfg = yaml.safe_load((Path(__file__).resolve().parent.parent / "config.yaml").read_text(encoding="utf-8"))
+
+        class Locatie:
+            def bepaal(self, w):
+                return ["Rijnbuurt"], "Rijnbuurt"
+
+        class Bron:
+            def details(self, web, w):
+                pass
+
+        class Melder:
+            verstuurd = []
+
+            def gratis_route(self, w):
+                self.verstuurd.append(w.gratis_bij)
+
+        z = Zoeker.__new__(Zoeker)
+        z.cfg, z.opslag, z.locatie, z.melder, z.web, z._bronnen = cfg, self.opslag, Locatie(), Melder(), None, {}
+        self.opslag.markeer(self.woning("Rentola", postcode="1079EK", slaapkamers=2, m2=63), True)
+
+        # zelfde woning zonder 'incl. servicekosten': valt hier op de prijs, maar de route is er wel
+        hausing = self.woning("Hausing", postcode="1079EK", slaapkamers=2, m2=63, plaats="Amsterdam", omschrijving="x" * 400)
+        reden = z._beoordeel(hausing, Bron(), Filter(cfg), False)
+        self.assertTrue(reden.startswith("te duur"), reden)
+        z._meld_gratis_route(hausing, reden)
+        self.assertEqual(Melder.verstuurd, [("Hausing", "https://Hausing.nl/x")])
+        Melder.verstuurd.clear()
+
+        # de volledige advertentie zegt dat het niet kan: dan niet 'reageer hier gratis' sturen
+        z._meld_gratis_route(self.woning("Funda", postcode="1079EK"), "tekst: 'no students'")
+        z._meld_gratis_route(self.woning("Funda", postcode="1079EK", status="gereserveerd"), "gereserveerd")
+        self.assertEqual(Melder.verstuurd, [])
+
+        # andersom niet: al gemeld via een gratis site, dan is er niets nieuws te melden
+        self.opslag.markeer(hausing, True)
+        kamernet = self.woning("Kamernet", postcode="1079EK", prijs_soort="service", slaapkamers=2, m2=63, plaats="Amsterdam", omschrijving="x" * 400)
+        reden = z._beoordeel(kamernet, Bron(), Filter(cfg), False)
+        self.assertEqual(reden, "al gemeld via Hausing")
+        z._meld_gratis_route(kamernet, reden)
+        self.assertEqual(Melder.verstuurd, [])
 
 
 if __name__ == "__main__":

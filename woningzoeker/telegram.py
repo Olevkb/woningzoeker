@@ -1,9 +1,12 @@
 """Meldingen naar je telefoon via een eigen Telegram-bot."""
 
 import html
+import json
 import logging
+import re
+import unicodedata
 from datetime import datetime
-from urllib.parse import quote_plus
+from urllib.parse import quote, quote_plus
 
 import requests
 
@@ -48,8 +51,16 @@ class Telegram:
                 pass  # foto werd niet geaccepteerd, stuur dan alleen tekst
         self._stuur("sendMessage", text=tekst, parse_mode="HTML", reply_markup=knoppen, disable_web_page_preview=True)
 
+    def gratis_route(self, w: Woning):
+        """Eerder gemeld via een betaalde site, en nu ook gevonden op een site waar reageren gratis is."""
+        site, url = w.gratis_bij
+        tekst = f"🆓 <b>{html.escape(w.adres or w.straat or 'Woning')}</b> ({euro(w.prijs)}) staat nu ook bij {html.escape(site)}: daar is reageren gratis"
+        self._stuur("sendMessage", text=tekst, parse_mode="HTML", disable_web_page_preview=True,
+                    reply_markup={"inline_keyboard": [[{"text": f"👉 Bekijk bij {site}", "url": url}]]})
 
-# Verzamelsites waar reageren meestal een betaald account vraagt. Dezelfde woning staat vaak ook bij de makelaar zelf.
+
+# Verzamelsites waar reageren meestal een betaald account vraagt. Rentola en Kamer.nl nemen vooral over van Pararius
+# en Kamernet (Rentola, 4 nov: 10 van de 16 woningen stonden met dezelfde prijs en m² op Pararius).
 BETAALD_REAGEREN = {
     "Rentola": "rentola.nl",
     "Huurstunt": "huurstunt.nl",
@@ -58,18 +69,66 @@ BETAALD_REAGEREN = {
 }
 
 
+# Funda schrijft straatnamen voluit: '1e Jan Steenstraat' bestaat daar alleen als 'eerste-jan-steenstraat'
+_VOLUIT = {"1e": "eerste", "2e": "tweede", "3e": "derde", "4e": "vierde", "5e": "vijfde",
+           "pr": "prins", "st": "sint", "burg": "burgemeester"}
+
+
+def _slug(tekst: str) -> str:
+    """'Nieuwmarkt/Lastage' -> 'nieuwmarkt-lastage', zoals Pararius en Funda hun adressen schrijven."""
+    plat = unicodedata.normalize("NFD", tekst).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", plat).strip("-")
+
+
+def pararius_zoeken(w: Woning) -> str:
+    """Zelfde buurt en prijs op Pararius (op straat zoeken kan daar niet): geeft meestal een handvol woningen.
+
+    Niets in die buurt binnen de prijs? Dan toont Pararius heel Amsterdam; bij ±50 gebeurde dat vaak, bij ±150 zelden.
+    """
+    # straat zonder huisnummer die door meerdere wijken loopt: dan heel Amsterdam binnen dezelfde prijs
+    plek = f"buurt-{_slug(w.wijk)}/" if w.wijk and len({wijk for wijk, _ in w.buurten}) <= 1 else ""
+    return f"https://www.pararius.nl/huurwoningen/amsterdam/{plek}{w.prijs - 150}-{w.prijs + 150}"
+
+
+def funda_zoeken(w: Woning) -> str:
+    """Alle huurwoningen in dezelfde straat op Funda."""
+    straat = re.sub(r"\b(\w+)\.?(?=\s)", lambda m: _VOLUIT.get(m[1].lower(), m[1]), w.straat)
+    return "https://www.funda.nl/zoeken/huur?selected_area=" + quote(json.dumps([f"amsterdam/straat-{_slug(straat)}"]))
+
+
 def knoppen_voor(w: Woning) -> dict:
     rij = [{"text": "👉 Bekijk advertentie", "url": w.url}]
     if w.adres:
         kaart = f"https://www.google.com/maps/search/?api=1&query={quote_plus(f'{w.adres}, {w.plaats or 'Amsterdam'}')}"
         rij.append({"text": "🗺 Kaart", "url": kaart})
     knoppen = [rij]
-    if w.bron in BETAALD_REAGEREN and w.straat:
-        # zelfde adres zoeken, zonder de betaalde verzamelsites: zo kom je bij de makelaar, Pararius of Funda
-        zonder = " ".join(f"-site:{d}" for d in BETAALD_REAGEREN.values())
-        zoek = f'"{w.adres or w.straat}" {w.plaats or "Amsterdam"} huur {zonder}'
-        knoppen.append([{"text": "🔎 Zoek de makelaar (gratis reageren)", "url": f"https://www.google.com/search?q={quote_plus(zoek)}"}])
+    if w.gratis_bij:
+        knoppen.insert(0, [{"text": f"🆓 Gratis reageren via {w.gratis_bij[0]}", "url": w.gratis_bij[1]}])
+    elif w.bron in BETAALD_REAGEREN and not w.gratis_reageren:
+        zoek = []
+        if w.prijs:
+            zoek.append({"text": "🔎 Zoek op Pararius", "url": pararius_zoeken(w)})
+        if w.straat:
+            zoek.append({"text": "🔎 Zoek op Funda", "url": funda_zoeken(w)})
+        if zoek:
+            knoppen.append(zoek)
     return {"inline_keyboard": knoppen}
+
+
+def route_regel(w: Woning) -> str:
+    """Hoe je op een betaalde site toch gratis kunt reageren, of dat dat waarschijnlijk niet kan."""
+    if w.bron not in BETAALD_REAGEREN:
+        return ""
+    if w.gratis_bij:
+        return f"🆓 staat ook bij {html.escape(w.gratis_bij[0])}: daar is reageren gratis"
+    if w.gratis_reageren:
+        return f"🆓 op deze advertentie mag iedereen gratis reageren via {html.escape(w.bron)}"
+    if w.verhuurder == "particulier":
+        return f"🙋 particuliere verhuurder: staat waarschijnlijk alleen op {html.escape(w.bron)}, en reageren kost daar geld"
+    if w.verhuurder:
+        wie = "makelaar" if w.verhuurder == "makelaar" else html.escape(w.verhuurder)
+        return f"🏢 {wie}: staat vaak ook op Pararius of Funda (🔎), daar is reageren gratis"
+    return f"💳 reageren via {html.escape(w.bron)} kost geld, maar hij staat vaak ook op Pararius of Funda (🔎): daar is het gratis"
 
 
 def opmaak_kort(w: Woning, cfg: dict) -> str:
@@ -85,6 +144,8 @@ def opmaak_kort(w: Woning, cfg: dict) -> str:
         f"🏠 <b>{e(w.adres or w.straat or 'Woning')}</b>" + (f" · {e(plek)}" if plek else ""),
         f"💶 {euro(w.prijs)}" + (f" · {maten}" if maten else "") + f" · via {e(w.bron)}",
     ]
+    if route := route_regel(w):
+        regels.append(route)
     regels.extend(e(label) for label in w.labels)
     return "\n".join(regels)
 
@@ -138,7 +199,7 @@ def opmaak(w: Woning, cfg: dict) -> str:
     bron = f"via {e(w.bron)}"
     geleden = hoe_lang_geleden(w.geplaatst)
     regels.append(f"🕒 {geleden + ' · ' if geleden else ''}{bron}")
-    if w.bron in BETAALD_REAGEREN:
-        regels.append(f"💳 reageren via {e(w.bron)} kost meestal geld; met 🔎 vind je vaak de makelaar zelf")
+    if route := route_regel(w):
+        regels.append(route)
     regels.extend(e(label) for label in w.labels if not label.startswith("⚠️"))
     return "\n".join(regels)

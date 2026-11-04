@@ -33,6 +33,9 @@ class Woning:
     max_personen: int | None = None
     status: str = ""  # bv. 'gereserveerd' of 'verhuurd' als de advertentiepagina dat zegt
     onzeker: str = ""  # waarom de voorwaarden (studenten, delers, garantsteller) niet te controleren waren
+    verhuurder: str = ""  # wie adverteert, als de site dat toont: 'particulier', 'makelaar' of een bedrijfsnaam
+    gratis_reageren: bool = False  # de site laat iedereen gratis reageren op deze advertentie
+    gratis_bij: tuple[str, str] | None = None  # (site, link) waar dezelfde woning gratis te bereiken is
     hints: list[str] = field(default_factory=list)  # losse tekst waar het adres waarschijnlijk in staat
     # ingevuld tijdens het filteren
     wijk: str = ""
@@ -58,6 +61,14 @@ class Woning:
         """Straat + huisnummer (alleen het getal), leeg als het huisnummer onbekend is."""
         nr = re.match(r"\d+", self.huisnummer or "")
         return f"{_plat(self.straat)}|{nr.group(0)}" if nr and self.straat else ""
+
+    def zelfde_woning(self, ander: "Woning") -> bool:
+        """Zelfde adres, of zelfde straat + prijs. Verschillende postcodes zijn nooit dezelfde woning."""
+        if self.postcode and ander.postcode and self.postcode != ander.postcode:
+            return False  # Lekstraat 7 en 71 (2 nov): zelfde straat, zelfde prijs, andere woning
+        if self.adres_sleutel and self.adres_sleutel == ander.adres_sleutel:
+            return True
+        return bool(self.straat) and self.dubbel_sleutel == ander.dubbel_sleutel
 
 
 def _plat(tekst: str) -> str:

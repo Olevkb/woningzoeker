@@ -25,7 +25,7 @@ from .filters import Filter
 from .locatie import Locatie
 from .model import Woning
 from .opslag import Opslag
-from .telegram import Telegram, euro, opmaak, opmaak_kort
+from .telegram import BETAALD_REAGEREN, Telegram, euro, opmaak, opmaak_kort
 from .web import Geweigerd, Web
 
 MAP = Path(__file__).resolve().parent.parent
@@ -128,7 +128,8 @@ class Zoeker:
                     log.info("  ✗ %-28s €%-5s %s", (w.adres or w.straat)[:28], w.prijs, reden)
                     if not droog:
                         self.opslag.markeer(w, False, reden)
-                elif any(m.dubbel_sleutel == w.dubbel_sleutel or (w.adres_sleutel and m.adres_sleutel == w.adres_sleutel) for m in matches):
+                        self._meld_gratis_route(w, reden)
+                elif any(m.zelfde_woning(w) for m in matches):
                     log.info("  = %-28s staat ook op een andere site", (w.adres or w.straat)[:28])
                     if not droog:
                         self.opslag.markeer(w, False, "dubbel in deze scan")
@@ -154,6 +155,23 @@ class Zoeker:
             self.opslag.meta_bewaar("teller", teller)
             self._dagelijks(teller)
         return len(matches)
+
+    def _meld_gratis_route(self, w: Woning, reden: str):
+        """Eerder gemeld via een betaalde site, en nu dezelfde woning op een site waar reageren gratis is.
+
+        Los van de afwijzing hier: een site zonder 'incl. servicekosten' valt bv. op 'te duur', terwijl het dezelfde woning is.
+        Alleen niet als deze advertentie laat zien dat de woning niet kan (voorwaarden, of al gereserveerd).
+        """
+        if not self.melder or w.bron in BETAALD_REAGEREN or reden.startswith(VOORWAARDEN) or w.status:
+            return
+        elders = self.opslag.elders(w, self.cfg["scan"].get("dubbel_dagen", 14))
+        if not elders or not elders[1] or elders[0] not in BETAALD_REAGEREN:
+            return
+        w.gratis_bij = (w.bron, w.url)
+        try:
+            self.melder.gratis_route(w)
+        except Exception as e:  # de woning zelf is al gemeld, dit is een extraatje
+            log.error("Melding gratis route mislukt voor %s: %s", w.url, e)
 
     def _dagelijks(self, teller: dict):
         """Eén keer per dag: laten weten dat hij nog draait, en het geheugen opruimen."""
@@ -231,6 +249,8 @@ class Zoeker:
             return reden
         if eerste and w.geplaatst and w.geplaatst < datetime.now() - timedelta(hours=s["eerste_scan_max_uren"]):
             return "eerste scan: te oud"
+        if w.bron in BETAALD_REAGEREN:
+            w.gratis_bij = self.opslag.gratis_bij(w, s.get("dubbel_dagen", 14), tuple(BETAALD_REAGEREN))
         w.onzeker = onzeker_reden(w)  # wordt dan als kort 'zelf checken'-bericht gemeld
         return None
 

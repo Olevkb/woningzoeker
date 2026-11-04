@@ -34,7 +34,7 @@ class Opslag:
             """
         )
         kolommen = {r[1] for r in self.db.execute("PRAGMA table_info(gezien)")}
-        for kolom, soort in (("adres", "TEXT"), ("bron", "TEXT"), ("prijs", "INTEGER")):  # toegevoegd na de eerste versie
+        for kolom, soort in (("adres", "TEXT"), ("bron", "TEXT"), ("prijs", "INTEGER"), ("postcode", "TEXT")):  # toegevoegd na de eerste versie
             if kolom not in kolommen:
                 self.db.execute(f"ALTER TABLE gezien ADD COLUMN {kolom} {soort}")
         self.db.execute("CREATE INDEX IF NOT EXISTS gezien_adres ON gezien(adres)")
@@ -58,21 +58,39 @@ class Opslag:
             return True, vorige
         return False, None
 
+    def _zelfde_woning(self, w: Woning, dagen: int) -> tuple[str, list]:
+        """Zoekvoorwaarde voor dezelfde woning op een andere site; zie Woning.zelfde_woning."""
+        grens = (datetime.now() - timedelta(days=dagen)).isoformat()
+        return (
+            "(dubbel = ? OR (adres != '' AND adres = ?)) AND bron != ? AND tijd > ? "
+            "AND (COALESCE(postcode, '') = '' OR ? = '' OR postcode = ?)",
+            [w.dubbel_sleutel if w.straat else None, w.adres_sleutel, w.bron, grens, w.postcode, w.postcode],
+        )
+
     def elders(self, w: Woning, dagen: int) -> tuple[str, bool, str, str] | None:
         """Dezelfde woning op een andere site (zelfde straat + prijs, of zelfde adres): (bron, gemeld, reden, url)."""
-        grens = (datetime.now() - timedelta(days=dagen)).isoformat()
+        waar, params = self._zelfde_woning(w, dagen)
         rij = self.db.execute(
-            "SELECT bron, gemeld, reden, url FROM gezien WHERE (dubbel = ? OR (adres != '' AND adres = ?)) "
-            "AND bron != ? AND tijd > ? ORDER BY gemeld DESC, tijd DESC LIMIT 1",
-            (w.dubbel_sleutel, w.adres_sleutel, w.bron, grens),
+            f"SELECT bron, gemeld, reden, url FROM gezien WHERE {waar} ORDER BY gemeld DESC, tijd DESC LIMIT 1", params
         ).fetchone()
         return (rij[0], bool(rij[1]), rij[2] or "", rij[3] or "") if rij else None
 
+    def gratis_bij(self, w: Woning, dagen: int, betaald) -> tuple[str, str] | None:
+        """Site en link van dezelfde woning op een site waar reageren niets kost."""
+        waar, params = self._zelfde_woning(w, dagen)
+        plekken = ",".join("?" * len(betaald))
+        rij = self.db.execute(
+            f"SELECT bron, url FROM gezien WHERE {waar} AND bron NOT IN ({plekken}) AND COALESCE(url, '') != '' "
+            "ORDER BY tijd DESC LIMIT 1",
+            [*params, *betaald],
+        ).fetchone()
+        return (rij[0], rij[1]) if rij else None
+
     def markeer(self, w: Woning, gemeld: bool, reden: str = ""):
         self.db.execute(
-            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, adres, bron, gemeld, reden, url, tijd, prijs) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (w.sleutel, w.dubbel_sleutel, w.adres_sleutel, w.bron, int(gemeld), reden, w.url, datetime.now().isoformat(), w.prijs),
+            "INSERT OR REPLACE INTO gezien (sleutel, dubbel, adres, bron, gemeld, reden, url, tijd, prijs, postcode) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (w.sleutel, w.dubbel_sleutel, w.adres_sleutel, w.bron, int(gemeld), reden, w.url, datetime.now().isoformat(), w.prijs, w.postcode),
         )
         self.db.commit()
 

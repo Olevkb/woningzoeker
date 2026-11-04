@@ -35,6 +35,14 @@ Inventarisatie van 30 oktober 2026, bijgewerkt op 2 november 2026. Elke bron is 
 | Huurda | verzamelsite | 🔧 |
 | Holland2Stay | gemeubileerd, korte tot middellange huur | ➖ valt af op jullie eisen (gemeubileerd) |
 
+**Reageren zonder te betalen (4 november).** Op Pararius en Funda is reageren gratis; op Kamernet, Rentola en Kamer.nl kost het geld.
+
+- *Rentola* neemt vooral over: van de 16 woningen met een reële prijs stonden er 10 met dezelfde prijs en m² op Pararius, en 2 kwamen van Kamernet. *Kamer.nl* doet hetzelfde.
+- *Kamernet* zet erbij wie adverteert. De meeste zijn particulieren; van de 7 geteste woningen stond er geen op Pararius, en op Funda ook niet (bij 1 straat kon dat niet meer gecontroleerd worden). Makelaars en bedrijven staan er ook tussen.
+- Daarom krijgen meldingen van deze sites twee knoppen: *Zoek op Pararius* (zelfde buurt, prijs ±150; op straat zoeken kan daar niet) en *Zoek op Funda* (zelfde straat). Google gaf vooral sites voor waardebepalingen, en nieuwe advertenties staan er nog niet in.
+- Heeft de zoeker dezelfde woning al bij een gratis site gezien, dan staat die link direct in de melding. Komt hij pas later op een gratis site, dan volgt een kort bericht.
+- Valt de Pararius-knop op "… Huurwoningen Amsterdam"? Dan staat er in die buurt niets binnen die prijs, en is de woning daar dus niet te vinden.
+
 ## 2. Corporaties en studentenhuisvesting
 
 | Bron | Wat staat er | Status |

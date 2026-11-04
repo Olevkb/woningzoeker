@@ -3,6 +3,7 @@ from ..web import Web, next_data
 from . import Bron, tijdstip
 
 APPARTEMENT = 2  # Kamernet listingType / searchCategories
+VERHUURDERS = {1: "particulier", 4: "makelaar"}  # landlordTypeId; 8 ('Overige') is een bedrijf met eigen naam
 
 
 class Kamernet(Bron):
@@ -31,6 +32,7 @@ class Kamernet(Bron):
                     m2=x.get("surfaceArea"),
                     soort="appartement",
                     foto=x.get("fullPreviewImageUrl") or "",
+                    gratis_reageren=bool(x.get("isReactForFree")),
                 )
             )
         return uit
@@ -48,5 +50,8 @@ class Kamernet(Bron):
         w.geplaatst = tijdstip(d.get("publishDate")) or w.geplaatst
         w.beschikbaar = tijdstip(d.get("availabilityStartDate")) or w.beschikbaar
         w.einddatum = tijdstip(d.get("availabilityEndDate")) or w.einddatum
+        naam = d.get("landlordDisplayName") or ""
+        w.verhuurder = VERHUURDERS.get(d.get("landlordTypeId")) or (naam if len(naam) > 2 else "")
+        w.gratis_reageren = bool(d.get("isReactForFree")) or w.gratis_reageren
         delen = (d.get("dutchTitle"), d.get("dutchDescription"), d.get("englishTitle"), d.get("englishDescription"))
         w.omschrijving = "\n".join(x for x in delen if x)
